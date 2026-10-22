@@ -46,6 +46,8 @@ namespace HordesOfAzeroth.Launcher
         CancellationTokenSource m_installCancel;
         bool m_updating;
         bool m_repairing;
+        CoopSession m_coop;
+        CancellationTokenSource m_coopCancel;
 
         public MainWindow()
         {
@@ -169,6 +171,8 @@ namespace HordesOfAzeroth.Launcher
 
         void Shutdown()
         {
+            m_coopCancel?.Cancel();
+            m_coop?.Dispose();
             m_updateTimer.Stop();
             m_background?.Cancel();
             if (m_tray != null)
@@ -205,7 +209,7 @@ namespace HordesOfAzeroth.Launcher
                     SetState(LauncherState.NotInstalled, "Ready to install", "the first install takes a few minutes");
                 return;
             }
-            if (m_latest?.Version != null && (m_latest.Version.IsNewerThan(installed) || m_installer.ChangedPackages(m_latest).Count > 0))
+            if (!m_updates.IsStandaloneCoop && m_latest?.Version != null && (m_latest.Version.IsNewerThan(installed) || m_installer.ChangedPackages(m_latest).Count > 0))
             {
                 string size = m_latest.DownloadSize > 0 ? $"{m_latest.DownloadSize / 1048576.0:0.0} MB · " : "";
                 SetState(LauncherState.UpdateAvailable, m_latest.Version.PatchName + " is ready", size + "your characters and unlocks stay");
@@ -229,6 +233,9 @@ namespace HordesOfAzeroth.Launcher
         void SetState(LauncherState state, string status, string detail)
         {
             m_state = state;
+            CoopChoices.IsEnabled = state == LauncherState.Ready;
+            if (state == LauncherState.Playing)
+                CancelCoopButton.IsEnabled = false;
             StatusText.Text = status;
             StatusText.Foreground = (Brush)FindResource(state == LauncherState.Missing ? "Problem" : "Text");
             StatusDetail.Text = string.IsNullOrEmpty(detail) ? "" : "   " + detail;
@@ -287,6 +294,12 @@ namespace HordesOfAzeroth.Launcher
 
         async Task CheckForUpdatesAsync(bool userAsked)
         {
+            if (m_updates.IsStandaloneCoop && UpdateCheck.LocalSource == null)
+            {
+                if (userAsked)
+                    StatusDetail.Text = "   This co-op edition is updated with a complete co-op package.";
+                return;
+            }
             try
             {
                 m_latest = await m_updates.FetchAsync();
@@ -934,8 +947,10 @@ namespace HordesOfAzeroth.Launcher
             try
             {
                 await RepairBeforePlayAsync();
-                m_game.Prepare(m_settings.Widescreen);
+                m_server.CoopEnabled = false;
                 await StartServerAsync(progress);
+                await m_server.EnsureAccountAsync("PLAYER", "player");
+                m_game.Prepare(m_settings.Widescreen);
                 await m_server.RemovePlayerGameMasterAsync();
                 StatusDetail.Text = "   Starting the game";
                 await m_game.StartAsync(CancellationToken.None);
@@ -998,7 +1013,7 @@ namespace HordesOfAzeroth.Launcher
 
         async Task WatchRunningGameAsync()
         {
-            SetState(LauncherState.Playing, "Playing", "the game's server stops when you close the game");
+            SetState(LauncherState.Playing, m_coop != null ? "Playing together" : "Playing", m_coop != null ? "close the game to leave co-op" : "the game's server stops when you close the game");
             if (m_settings.KeepInTray)
                 Hide();
             await m_game.WaitForAllToCloseAsync(CancellationToken.None);
@@ -1006,13 +1021,146 @@ namespace HordesOfAzeroth.Launcher
             SetState(LauncherState.Stopping, "Closing", "saving and stopping the game's server");
             try
             {
-                await m_server.StopAsync();
+                m_coop?.Dispose();
+                if (m_coop == null || m_coop.IsHost)
+                    await m_server.StopAsync();
             }
             finally
             {
+                ResetCoop();
                 m_state = LauncherState.Ready;
                 RefreshState();
             }
+        }
+
+        async void HostCoop_Click(object sender, RoutedEventArgs e) => await StartCoopAsync(true);
+
+        async void JoinCoop_Click(object sender, RoutedEventArgs e) => await StartCoopAsync(false);
+
+        void ChooseJoinCoop_Click(object sender, RoutedEventArgs e)
+        {
+            HostCoopButton.Visibility = Visibility.Collapsed;
+            ChooseJoinButton.Visibility = Visibility.Collapsed;
+            CoopJoinForm.Visibility = Visibility.Visible;
+            CoopHint.Text = "Paste the invitation copied by your friend, then join their game.";
+            CoopInvitation.Focus();
+        }
+
+        void BackFromJoinCoop_Click(object sender, RoutedEventArgs e)
+        {
+            HostCoopButton.Visibility = Visibility.Visible;
+            ChooseJoinButton.Visibility = Visibility.Visible;
+            CoopJoinForm.Visibility = Visibility.Collapsed;
+            CoopHint.Text = "Survive together with a friend. Create a game or join their invitation.";
+        }
+
+        async Task StartCoopAsync(bool host)
+        {
+            if (m_state != LauncherState.Ready || m_game.IsRunning)
+                return;
+            if (!host && string.IsNullOrWhiteSpace(CoopInvitation.Text))
+            {
+                CoopHint.Text = "Paste the invitation your friend copied from their game.";
+                CoopInvitation.Focus();
+                return;
+            }
+            string invitation = CoopInvitation.Text;
+            m_coopCancel = new CancellationTokenSource();
+            CancellationToken cancel = m_coopCancel.Token;
+            m_coop = new CoopSession(m_folder, m_server);
+            m_coop.StatusChanged += text => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (m_coop == null)
+                    return;
+                CoopHint.Text = text;
+                if (m_state == LauncherState.Playing)
+                {
+                    ShowFromTray();
+                    StatusDetail.Text = "   " + text;
+                }
+            }));
+            SetState(LauncherState.Starting, host ? "Creating your game" : "Joining your friend", "");
+            CoopChoices.Visibility = Visibility.Collapsed;
+            CoopLobby.Visibility = Visibility.Visible;
+            CoopCode.Visibility = Visibility.Collapsed;
+            CopyCoopButton.Visibility = Visibility.Collapsed;
+            CancelCoopButton.IsEnabled = true;
+            CoopHint.Text = host ? "Preparing your camp…" : "Connecting to your friend's game…";
+            CopyCoopButton.Content = "Copy invitation";
+            try
+            {
+                if (host)
+                {
+                    m_server.CoopEnabled = true;
+                    await m_server.StartAsync(new Progress<string>(text => CoopHint.Text = text), cancel);
+                    string code = await m_coop.HostAsync(cancel);
+                    cancel.ThrowIfCancellationRequested();
+                    CoopCode.Text = code;
+                    CoopCode.Visibility = Visibility.Visible;
+                    CopyCoopButton.Visibility = Visibility.Visible;
+                    CoopHint.Text = "Send this invitation to your friend. The game opens for both of you when they join.";
+                    StatusText.Text = "Waiting for your friend";
+                    Progress.IsIndeterminate = false;
+                    Progress.Visibility = Visibility.Hidden;
+                    await m_coop.WaitForGuestAsync(cancel);
+                }
+                else
+                    await m_coop.JoinAsync(invitation, cancel);
+                cancel.ThrowIfCancellationRequested();
+                CoopHint.Text = "You're connected! Choose your heroes, then get ready together at the Run Master.";
+                m_game.Prepare(m_settings.Widescreen, m_coop.Account, m_coop.Password, true, m_coop.HeroProfile);
+                await m_game.StartAsync(cancel);
+                await WatchRunningGameAsync();
+            }
+            catch (Exception e) when (!(e is OutOfMemoryException))
+            {
+                m_coop?.Dispose();
+                if (host)
+                    await m_server.StopAsync();
+                ResetCoop();
+                m_state = LauncherState.Ready;
+                RefreshState();
+                if (!(e is OperationCanceledException))
+                {
+                    CoopHint.Text = e.Message;
+                    ShowProblem("Co-op couldn't start", "You can try again below.");
+                }
+            }
+        }
+
+        void ResetCoop()
+        {
+            m_coop = null;
+            m_coopCancel?.Dispose();
+            m_coopCancel = null;
+            m_server.CoopEnabled = false;
+            CoopLobby.Visibility = Visibility.Collapsed;
+            CoopChoices.Visibility = Visibility.Visible;
+            BackFromJoinCoop_Click(null, null);
+            CoopHint.Text = "Survive together with a friend. Co-op heroes are saved on the host's PC. Rejoin the same host to continue their progress.";
+            CoopCode.Clear();
+        }
+
+        void CopyCoop_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Clipboard.SetText(CoopCode.Text);
+                CopyCoopButton.Content = "Invitation copied!";
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                CoopCode.SelectAll();
+                CoopCode.Focus();
+                CoopHint.Text = "Press Ctrl+C to copy your invitation.";
+            }
+        }
+
+        void CancelCoop_Click(object sender, RoutedEventArgs e)
+        {
+            m_coopCancel?.Cancel();
+            m_coop?.Dispose();
+            CancelCoopButton.IsEnabled = false;
         }
 
         async void CheckForUpdates_Click(object sender, RoutedEventArgs e)

@@ -129,7 +129,8 @@ function Get-CMake {
         Where-Object { Test-Path (Join-Path $_ 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe') } |
         Select-Object -First 1
     if (-not $instance) { throw 'Visual Studio 2022 Build Tools with the C++ workload are needed (see README).' }
-    [pscustomobject]@{ Exe = Join-Path $instance 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'; Instance = $instance }
+    $generator = if ($instance -match '\\18\\') { 'Visual Studio 18 2026' } else { 'Visual Studio 17 2022' }
+    [pscustomobject]@{ Exe = Join-Path $instance 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'; Instance = $instance; Generator = $generator }
 }
 
 function Invoke-Native([string]$What, [string]$Exe, [string[]]$Arguments) {
@@ -146,10 +147,10 @@ function Invoke-Quiet([string]$What, [string]$Exe, [string[]]$Arguments) {
 
 function Copy-Runtime([string]$Instance, [string[]]$Targets) {
     $redist = Get-ChildItem (Join-Path $Instance 'VC\Redist\MSVC') -Directory | Sort-Object Name -Descending |
-        ForEach-Object { Join-Path $_.FullName 'x64\Microsoft.VC143.CRT' } | Where-Object { Test-Path $_ } | Select-Object -First 1
+        ForEach-Object { Get-ChildItem (Join-Path $_.FullName 'x64\Microsoft.VC*.CRT') -Directory } | Select-Object -First 1
     if (-not $redist) { throw 'The Visual C++ redistributable files were not found in the Build Tools.' }
     foreach ($target in $Targets) {
-        foreach ($dll in $runtimeDlls) { Copy-Item (Join-Path $redist $dll) $target -Force }
+        foreach ($dll in $runtimeDlls) { Copy-Item (Join-Path $redist.FullName $dll) $target -Force }
     }
 }
 
@@ -168,7 +169,7 @@ function Invoke-ServerBuild {
     Write-Host "Building the server from fork commit $($commit.Substring(0, 9)) (portable, not tuned to this CPU)..."
     $cmake = Get-CMake
     Invoke-Native 'CMake configure' $cmake.Exe @(
-        '-S', $serverSource, '-B', $serverBuild, '-G', 'Visual Studio 17 2022', '-A', 'x64',
+        '-S', $serverSource, '-B', $serverBuild, '-G', $cmake.Generator, '-A', 'x64',
         "-DCMAKE_GENERATOR_INSTANCE=$($cmake.Instance)",
         '-DBUILD_EXTRACTORS=1', '-DBUILD_FOR_HOST_CPU=OFF', "-DCMAKE_INSTALL_PREFIX=$serverInstall"
     )
@@ -189,6 +190,14 @@ function Invoke-PackageBuild([string]$Name) {
             if ($LASTEXITCODE -ne 0) { throw 'TelegraphKit did not compile.' }
         }
         'server' { Invoke-ServerBuild }
+        'coop' {
+            $source = Join-Path (Get-CommittedTree) 'tools\coop\Cargo.toml'
+            Invoke-Native 'Co-op build' 'cargo' @('build', '--locked', '--release', '--manifest-path', $source)
+            $coopOut = Join-Path $buildDir 'coop'
+            New-Item -ItemType Directory -Force $coopOut | Out-Null
+            Copy-Item (Join-Path (Split-Path $source) 'target\release\hoa-coop.exe') $coopOut
+            Copy-Runtime (Get-CMake).Instance @($coopOut)
+        }
         'version' { [System.IO.File]::WriteAllText((Join-Path $buildDir 'VERSION'), "$version`n") }
         'launcher' {
             $project = Join-Path (Get-CommittedTree) 'tools\launcher\HordesOfAzerothLauncher.csproj'
@@ -452,6 +461,7 @@ $manifest = [ordered]@{
     published = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     minLauncherVersion = $releaseConfig.minLauncherVersion
     realmName = $releaseConfig.realmName
+    coopProtocol = $releaseConfig.coopProtocol
     clientDlls = $releaseConfig.clientDlls
     releaseNotes = $notes
     navTiles = $navGroups

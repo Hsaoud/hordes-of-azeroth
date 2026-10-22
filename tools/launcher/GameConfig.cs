@@ -65,6 +65,17 @@ namespace HordesOfAzeroth.Launcher
                 Write(folder, missing);
         }
 
+        public static void SetLogin(GameFolder folder, string account, string realmName)
+        {
+            Write(folder, new Dictionary<string, string>
+            {
+                ["realmList"] = "127.0.0.1",
+                ["realmName"] = realmName,
+                ["accountName"] = account,
+            });
+            File.WriteAllText(Path.Combine(folder.Root, "realmlist.wtf"), "set realmlist 127.0.0.1\r\n");
+        }
+
         public static bool IsBorderless(GameFolder folder)
         {
             string path = BorderlessPath(folder);

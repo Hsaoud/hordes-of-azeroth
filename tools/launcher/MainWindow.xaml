@@ -50,6 +50,31 @@
                 </TextBlock>
             </StackPanel>
 
+            <Border x:Name="CoopCard" Width="360" Margin="36,110,0,24" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                    Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="6">
+                <StackPanel Margin="22,18">
+                    <TextBlock Text="BETTER TOGETHER" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Accent}" />
+                    <TextBlock Text="Online co-op" FontSize="25" FontWeight="SemiBold" Margin="0,4,0,8" />
+                    <TextBlock x:Name="CoopHint" Text="Survive together with a friend. Create a game or paste their invitation to join." TextWrapping="Wrap" FontSize="13" Foreground="{StaticResource Muted}" Margin="0,0,0,14" />
+                    <StackPanel x:Name="CoopChoices">
+                        <Button x:Name="HostCoopButton" Content="Create a game" Style="{StaticResource PrimaryButton}" Height="46" FontSize="17" Click="HostCoop_Click" />
+                        <Button x:Name="ChooseJoinButton" Content="Join a friend" Style="{StaticResource MoreButton}" Height="40" Margin="0,8,0,0" Click="ChooseJoinCoop_Click" />
+                        <StackPanel x:Name="CoopJoinForm" Visibility="Collapsed">
+                        <TextBlock Text="Your friend's invitation" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,0,0,5" />
+                        <TextBox x:Name="CoopInvitation" Height="35" FontSize="14" Padding="7" Background="{StaticResource Background}" Foreground="{StaticResource Text}" BorderBrush="{StaticResource Line}" MaxLength="160" AutomationProperties.Name="Your friend's invitation" />
+                        <Button x:Name="JoinCoopButton" Content="Join a friend" Style="{StaticResource MoreButton}" Height="40" Margin="0,7,0,0" Click="JoinCoop_Click" />
+                        <Button Content="Back" Style="{StaticResource PagerButton}" HorizontalAlignment="Left" Margin="0,6,0,0" Click="BackFromJoinCoop_Click" />
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel x:Name="CoopLobby" Visibility="Collapsed">
+                        <TextBox x:Name="CoopCode" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" Padding="8" Background="{StaticResource Background}" Foreground="{StaticResource Accent}" BorderBrush="{StaticResource Line}" AutomationProperties.Name="Invitation code" />
+                        <Button x:Name="CopyCoopButton" Content="Copy invitation" Style="{StaticResource MoreButton}" Height="38" Margin="0,8,0,0" Click="CopyCoop_Click" />
+                        <Button x:Name="CancelCoopButton" Content="Cancel" Style="{StaticResource MoreButton}" Height="36" Margin="0,8,0,0" Click="CancelCoop_Click" />
+                    </StackPanel>
+                    <TextBlock Text="2 players · Private invitation · No account needed" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,14,0,0" />
+                </StackPanel>
+            </Border>
+
             <Border Width="396" Margin="0,24,24,24" HorizontalAlignment="Right" VerticalAlignment="Top"
                     Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="6">
                 <DockPanel MaxHeight="560">

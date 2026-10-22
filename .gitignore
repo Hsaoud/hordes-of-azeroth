@@ -6,6 +6,7 @@
 !/.gitignore
 !/README.md
 !/BUILDING.md
+!/COOP.md
 !/LICENSE
 !/THIRD-PARTY-NOTICES.md
 !/.github/
@@ -33,9 +34,11 @@
 
 # Local server tooling and settings.
 !/tools/
+/tools/**/__pycache__/
 /tools/telegraphs/bin/
 /tools/clientfix/build/
 /tools/launcher/bin/
+/tools/launcher/bin-preview/
 /tools/launcher/obj/
 !/config/
 !/play.bat

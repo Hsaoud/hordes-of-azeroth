@@ -7,6 +7,7 @@
 VanillaBonkUI.lua
 VanillaBonkDebuffs.lua
 VanillaBonk.lua
+VanillaBonkCoop.lua
 VanillaBonkRunMaster.lua
 VanillaBonkBars.lua
 VanillaBonkPlates.lua

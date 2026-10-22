@@ -38,6 +38,7 @@
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Security" />
   </ItemGroup>
 
 </Project>

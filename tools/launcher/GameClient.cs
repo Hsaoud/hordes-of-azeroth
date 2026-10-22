@@ -27,7 +27,7 @@ namespace HordesOfAzeroth.Launcher
 
         public bool IsRunning => Process.GetProcessesByName(ProcessName).Length > 0;
 
-        public void Prepare(bool widescreen)
+        public void Prepare(bool widescreen, string account = Account, string password = Password, bool coop = false, string heroProfile = null)
         {
             if (!File.Exists(m_folder.GameExe))
                 throw new FileNotFoundException($"{m_folder.GameExeName} is missing. {LocalServer.RepairAdvice}");
@@ -35,10 +35,24 @@ namespace HordesOfAzeroth.Launcher
             Directory.CreateDirectory(m_folder.GlueXml);
             File.WriteAllLines(Path.Combine(m_folder.GlueXml, "BonkAccount.lua"), new[]
             {
-                $"BONK_ACCOUNT = {LuaString(Account)};",
-                $"BONK_PASSWORD = {LuaString(Password)};",
+                $"BONK_ACCOUNT = {LuaString(account)};",
+                $"BONK_PASSWORD = {LuaString(password)};",
+                $"BONK_COOP = {(coop ? "true" : "false")};",
             }, new UTF8Encoding(false));
             string stats = Path.Combine(m_folder.GlueXml, "BonkStats.lua");
+            string soloStats = Path.Combine(m_folder.LauncherData, "solo-hero-stats.lua");
+            if (heroProfile != null)
+            {
+                Directory.CreateDirectory(m_folder.LauncherData);
+                if (File.Exists(stats) && !File.Exists(soloStats))
+                    File.Copy(stats, soloStats);
+                File.WriteAllText(stats, heroProfile, new UTF8Encoding(false));
+            }
+            else if (File.Exists(soloStats))
+            {
+                File.Copy(soloStats, stats, true);
+                File.Delete(soloStats);
+            }
             if (!File.Exists(stats))
                 File.WriteAllLines(stats, new[] { "BONK_STATS = nil;" }, new UTF8Encoding(false));
 
@@ -48,6 +62,7 @@ namespace HordesOfAzeroth.Launcher
 
             ForeignAddons.Disable(m_folder, Account);
             GameConfig.EnsureDefaults(m_folder, RealmName);
+            GameConfig.SetLogin(m_folder, account, RealmName);
             ClientPatcher.SetFieldOfView(m_folder, widescreen);
             TurboMod.Apply(m_folder);
         }

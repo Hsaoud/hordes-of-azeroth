@@ -31,6 +31,7 @@ namespace HordesOfAzeroth.Launcher
         Process m_world;
         Process m_login;
         Process m_database;
+        public bool CoopEnabled { get; set; }
 
         public LocalServer(GameFolder folder)
         {
@@ -246,11 +247,50 @@ namespace HordesOfAzeroth.Launcher
             await QueryAsync("realmd", "DELETE FROM account_access WHERE id IN (SELECT id FROM account WHERE username = 'PLAYER')");
         }
 
+        public async Task EnsureAccountAsync(string account, string password)
+        {
+            if (!Regex.IsMatch(account, @"\A(?:PLAYER|COOP[0-9A-F]{12})\z") || !Regex.IsMatch(password, @"\A[A-Z0-9]{1,16}\z", RegexOptions.IgnoreCase))
+                throw new InvalidDataException("Invalid co-op profile.");
+            string exists = await QueryAsync("realmd", $"SELECT COUNT(*) FROM account WHERE username = '{account}'");
+            if (exists.Trim() == "0")
+                await RunConsoleAsync($"account create {account} {password}");
+            await RunConsoleAsync($"account set password {account} {password} {password}");
+            if (CoopEnabled || account != "PLAYER" || !m_folder.IsDevelopmentTree)
+                await QueryAsync("realmd", $"DELETE FROM account_access WHERE id IN (SELECT id FROM account WHERE username = '{account}')");
+            if ((await QueryAsync("realmd", $"SELECT COUNT(*) FROM account WHERE username = '{account}'")).Trim() != "1")
+                throw new InvalidOperationException("Your co-op profile couldn't be prepared. Please try hosting again.");
+        }
+
         public async Task<string> QueryAsync(string database, string sql)
         {
             List<string> arguments = DatabaseLogin.ToList();
             arguments.AddRange(new[] { "-N", "-B", database, "-e", "\"" + sql.Replace("\"", "\\\"") + "\"" });
             return await RunToEndAsync(Path.Combine(m_folder.MariaDb, "bin", "mariadb.exe"), m_folder.MariaDb, arguments.ToArray());
+        }
+
+        public async Task<object> ReadHeroProfileAsync(string account)
+        {
+            if (!Regex.IsMatch(account, @"\ACOOP[0-9A-F]{12}\z"))
+                throw new InvalidDataException("Invalid co-op profile.");
+            string goldText = await QueryAsync("characters", $"SELECT COALESCE(b.gold, 0) FROM realmd.account a LEFT JOIN bonk_account b ON b.account = a.id WHERE a.username = '{account}'");
+            uint.TryParse(goldText.Trim(), out uint gold);
+            string rows = await QueryAsync("characters", $"SELECT c.name, c.played_time_total, COALESCE(s.runs, 0), COALESCE(s.best_stage, 0), COALESCE(s.best_time_sec, 0), COALESCE(s.kills, 0), COALESCE(s.gold_earned, 0) FROM realmd.account a JOIN characters c ON c.account = a.id LEFT JOIN bonk_character_stats s ON s.guid = c.guid WHERE a.username = '{account}' ORDER BY c.guid LIMIT 10");
+            var heroes = new List<Dictionary<string, object>>();
+            foreach (string row in rows.Split('\n'))
+            {
+                string[] cells = row.TrimEnd('\r').Split('\t');
+                if (cells.Length != 7)
+                    continue;
+                var hero = new Dictionary<string, object> { ["name"] = cells[0] };
+                string[] keys = { "played", "runs", "bestStage", "bestTime", "kills", "goldEarned" };
+                for (int i = 0; i < keys.Length; i++)
+                {
+                    uint.TryParse(cells[i + 1], out uint number);
+                    hero[keys[i]] = number;
+                }
+                heroes.Add(hero);
+            }
+            return new { gold, heroes };
         }
 
         public Task BackUpAsync(string file, params string[] databases)
@@ -296,7 +336,8 @@ namespace HordesOfAzeroth.Launcher
 
         static string Details(string error, string output)
         {
-            string line = Lines(error).FirstOrDefault(l => !l.StartsWith("WARNING"))
+            string line = Lines(error).FirstOrDefault(l => l.StartsWith("ERROR", StringComparison.OrdinalIgnoreCase))
+                ?? Lines(error).FirstOrDefault(l => !l.StartsWith("WARNING") && !l.StartsWith("---"))
                 ?? Lines(output).LastOrDefault();
             return line ?? "no details";
         }
@@ -327,7 +368,27 @@ namespace HordesOfAzeroth.Launcher
                     throw new InvalidDataException($"{overrides} sets {match.Groups[1].Value}, which {dist} does not define.");
                 lines[index] = line.Trim();
             }
+            if (name == "mangosd")
+            {
+                SetConfigLine(lines, "Bonk.Coop", CoopEnabled ? "1" : "0");
+                if (CoopEnabled)
+                {
+                    SetConfigLine(lines, "AllowTwoSide.Interaction.Group", "1");
+                    SetConfigLine(lines, "AllowTwoSide.Interaction.Chat", "1");
+                    SetConfigLine(lines, "MapUpdate.Instanced.UpdateThreads", "0");
+                    SetConfigLine(lines, "MapUpdate.ObjectsUpdate.MaxThreads", "1");
+                    SetConfigLine(lines, "MapUpdate.VisibilityUpdate.MaxThreads", "1");
+                    SetConfigLine(lines, "PlayerLimit", "2");
+                }
+            }
             File.WriteAllLines(target, lines);
+        }
+
+        static void SetConfigLine(List<string> lines, string key, string value)
+        {
+            Regex match = new Regex(@"^\s*" + Regex.Escape(key) + @"\s*=");
+            lines.RemoveAll(line => match.IsMatch(line));
+            lines.Add(key + " = " + value);
         }
 
         static Process StartHidden(string exe, string workingDirectory, params string[] arguments)

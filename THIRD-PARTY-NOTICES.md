@@ -125,3 +125,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+# Co-op networking
+
+The co-op edition includes Iroh 1.2.0 and its transitive Rust dependencies. Iroh is distributed under the MIT and Apache-2.0 licenses. The accompanying `HordesOfAzeroth-Rust-Licenses.zip` contains the dependency inventory and license notices from the locked Cargo dependency graph. The corresponding modified game sources accompany the edition as `HordesOfAzeroth-Coop-Sources.zip`.

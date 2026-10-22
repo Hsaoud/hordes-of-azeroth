@@ -1,0 +1,23 @@
+[package]
+name = "hoa-coop"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+license = "GPL-3.0-only"
+
+[dependencies]
+anyhow = "1"
+data-encoding = "2"
+iroh = "=1.2.0"
+rand = "0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+subtle = "2"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1

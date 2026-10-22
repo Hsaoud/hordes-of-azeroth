@@ -1,0 +1,13 @@
+JOUER ENSEMBLE
+
+1. Extrayez chacun votre copie du jeu, puis ouvrez HoALauncher.exe.
+2. L'un choisit « Create a game », puis « Copy invitation » et envoie ce code à son ami.
+3. L'autre choisit « Join a friend », colle le code et confirme. Le jeu s'ouvre sur les deux PC.
+4. Choisissez chacun votre héros. Au maître des expéditions, cliquez tous les deux sur « Ready together ».
+
+Choisissez vos améliorations tranquillement : la pause s'applique aux deux joueurs.
+Après le boss, prenez chacun votre portail pour continuer ensemble.
+
+L'hôte doit garder le jeu ouvert. Vos héros coop sont sauvegardés chez lui : retrouvez le même hôte pour continuer votre progression.
+
+Pour jouer seul, utilisez « Play ».

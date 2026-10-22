@@ -56,6 +56,7 @@ namespace HordesOfAzeroth.Launcher
         public GameVersion Version;
         public long DownloadSize;
         public string RealmName = "Hordes of Azeroth";
+        public int CoopProtocol;
         public List<string> ClientDlls = new List<string>();
         public List<ReleaseNote> Notes = new List<ReleaseNote>();
         public List<PackageEntry> Packages = new List<PackageEntry>();
@@ -80,6 +81,7 @@ namespace HordesOfAzeroth.Launcher
         }
 
         string CachedManifest => Path.Combine(m_folder.LauncherData, "manifest.json");
+        public bool IsStandaloneCoop => File.Exists(Path.Combine(m_folder.LauncherData, "coop-build.txt"));
 
         public static string LocalSource;
 
@@ -99,6 +101,8 @@ namespace HordesOfAzeroth.Launcher
                 client.Encoding = Encoding.UTF8;
                 string json = await client.DownloadStringTaskAsync(new Uri(ManifestUrl));
                 Manifest manifest = Parse(json);
+                if (File.Exists(Path.Combine(m_folder.Root, "tools", "hoa-coop.exe")) && manifest.CoopProtocol != 1)
+                    throw new InvalidOperationException("This update does not include the co-op edition.");
                 Directory.CreateDirectory(m_folder.LauncherData);
                 File.WriteAllText(CachedManifest, json, new UTF8Encoding(false));
                 return manifest;
@@ -141,6 +145,8 @@ namespace HordesOfAzeroth.Launcher
         {
             Dictionary<string, object> root = (Dictionary<string, object>)new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.DeserializeObject(json);
             Manifest manifest = new Manifest { Version = GameVersion.Parse(root["version"] as string) };
+            if (root.TryGetValue("coopProtocol", out object coopProtocol))
+                manifest.CoopProtocol = Convert.ToInt32(coopProtocol);
             if (root.TryGetValue("releaseNotes", out object notes) && notes is object[] list)
                 foreach (Dictionary<string, object> note in list.OfType<Dictionary<string, object>>())
                     manifest.Notes.Add(new ReleaseNote { Version = GameVersion.Parse(note["version"] as string), Text = note["notes"] as string ?? "" });

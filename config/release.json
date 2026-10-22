@@ -3,6 +3,7 @@
   "productName": "Hordes of Azeroth",
   "minLauncherVersion": "0.1.0",
   "realmName": "Hordes of Azeroth",
+  "coopProtocol": 1,
   "clientDlls": ["ClassicAPI.dll", "HordesOfAzerothClientFix.dll"],
   "thirdParty": [
     {
@@ -29,6 +30,7 @@
     }
   ],
   "packages": [
+    { "name": "coop", "build": "coop", "changesWith": "tools/coop/*", "files": [{ "from": "release/build/coop/hoa-coop.exe", "to": "tools/hoa-coop.exe" }, { "from": "release/build/coop/*.dll", "to": "tools" }] },
     { "name": "launcher", "build": "launcher", "changesWith": "tools/launcher/*.*", "files": [{ "from": "release/build/launcher/HoALauncher.exe", "to": "HoALauncher.exe" }] },
     { "name": "addon", "git": ["Interface/AddOns/HordesOfAzeroth"] },
     { "name": "glue", "git": ["Interface/GlueXML"] },
