@@ -87,6 +87,10 @@ if ($GameFolder) {
     if ($destination.StartsWith($source + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Choose an installed game outside the build output.' }
     if (Test-Path -LiteralPath $destination) {
         if (-not $ReusePreparedGame -or -not (Test-Path -LiteralPath (Join-Path $destination 'HordesOfAzeroth\coop-build.txt'))) { throw 'The prepared game already exists. Choose another output folder before preparing a fresh copy.' }
+        if (Test-Path -LiteralPath (Join-Path $source 'server\mariadb-data')) {
+            & robocopy (Join-Path $source 'server\mariadb-data') (Join-Path $destination 'server\mariadb-data') /E /R:1 /W:1 /NFL /NDL /NJH /NJS
+            if ($LASTEXITCODE -ge 8) { throw 'The database did not synchronize.' }
+        }
     } else {
         New-Item -ItemType Directory -Path $destination | Out-Null
         & robocopy $source $destination /E /R:1 /W:1 /NFL /NDL /NJH /NJS /XD .git .codex .agents .aws build build-coop core .cargo .rustup target release backups (Join-Path $source 'Logs') (Join-Path $source 'server\logs') WDB
