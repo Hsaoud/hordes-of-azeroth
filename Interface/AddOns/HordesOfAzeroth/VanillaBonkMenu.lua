@@ -125,9 +125,10 @@ end
 
 local levelRow = StatRow(1, "Level", "Spell_Nature_TimeStop")
 local killsRow = StatRow(2, "Kills", "INV_Misc_Bone_HumanSkull_01")
-local valorRow = StatRow(3, "Valor", "INV_Misc_Coin_04")
-local ticketsRow = StatRow(4, "Tickets", "INV_Misc_Ticket_Darkmoon_01")
-local goldRow = StatRow(5, "Gold", "INV_Misc_Coin_02")
+local timeRow = StatRow(3, "Time", "INV_Misc_PocketWatch_01")
+local valorRow = StatRow(4, "Valor", "INV_Misc_Coin_04")
+local ticketsRow = StatRow(5, "Tickets", "INV_Misc_Ticket_Darkmoon_01")
+local goldRow = StatRow(6, "Gold", "INV_Misc_Coin_02")
 
 local menuCard = Card("MageFire")
 
@@ -156,7 +157,7 @@ menuCard.resume = Button("Resume", 28, function()
     PlaySound("igMainMenuContinue")
     Close()
 end)
-menuCard.endRun = Button("|cffff5a4aEnd Run|r", 22, function()
+menuCard.endRun = Button("|cffff5a4aLeave Expedition|r", 24, function()
     PlaySound("igMainMenuOption")
     confirm:Show()
 end)
@@ -203,6 +204,7 @@ local function LayoutButtons()
             y = y - button:GetHeight() - 4
         end
     end
+    menuCard.contentHeight = -y + 18
     local leaving = StaticPopup_Visible("CAMP") or StaticPopup_Visible("QUIT")
     for _, button in ipairs({ menuCard.logout, menuCard.quit }) do
         if leaving then
@@ -318,9 +320,7 @@ local function RefreshBuild()
     else
         buildCard.empty:Hide()
     end
-    local height = max(CARD_HEIGHT, 24 - bottom)
-    buildCard:SetHeight(height)
-    UI.TalentArtCoords(buildCard.art, CARD_WIDTH - 18, height - 18)
+    buildCard.contentHeight = 24 - bottom
 end
 
 confirm = CreateFrame("Frame", nil, menu)
@@ -350,7 +350,7 @@ confirm.text:SetPoint("TOP", confirm.question, "BOTTOM", 0, -6)
 confirm.text:SetWidth(310)
 confirm.text:SetTextColor(1, 0.82, 0)
 confirm.text:SetText("You keep the gold and Darkmoon Tickets earned so far. Loot you haven't extracted is lost.")
-confirm.yes = UI.Button(confirm.box, 120, "|cffff5a4aEnd Run|r", function()
+confirm.yes = UI.Button(confirm.box, 120, "|cffff5a4aLeave|r", function()
     PlaySound("igMainMenuOptionCheckBoxOn")
     Command("stop")
     Close()
@@ -363,33 +363,49 @@ end)
 confirm.no:SetPoint("BOTTOMLEFT", confirm.box, "BOTTOM", 6, 18)
 
 local function Refresh()
+    LayoutButtons()
     if run.inRun then
         menu.title:SetText("Paused")
         local difficulty = run.difficulty ~= "" and ("  |cff9d9d9d·|r  |cff" .. (DIFFICULTY_COLORS[run.difficulty] or "ffffff") .. run.difficulty .. "|r") or ""
         menu.subtitle:SetText("|cffffd100Stage " .. run.stage .. "|r" .. difficulty .. "  |cff9d9d9d·|r  |cffffffff" .. UI.FormatTime(run.elapsed) .. "|r")
         levelRow.value:SetText(run.level or "-")
         killsRow.value:SetText(run.kills or 0)
+        timeRow.value:SetText(UI.FormatTime(run.elapsed))
         valorRow.value:SetText("|cffffe873" .. (run.valor or 0) .. "|r")
         ticketsRow.value:SetText("|cffd6b0ff" .. (run.shards or 0) .. "|r")
         goldRow.value:SetText(UI.FormatGold(run.gold or 0))
         RefreshBuild()
+        local cardHeight = max(menuCard.contentHeight or 340, 310)
+        runCard:SetHeight(cardHeight)
+        menuCard:SetHeight(cardHeight)
+        UI.TalentArtCoords(runCard.art, CARD_WIDTH - 18, cardHeight - 18)
+        UI.TalentArtCoords(menuCard.art, CARD_WIDTH - 18, cardHeight - 18)
+        local buildHeight = max(cardHeight, buildCard.contentHeight or cardHeight)
+        buildCard:SetHeight(buildHeight)
+        UI.TalentArtCoords(buildCard.art, CARD_WIDTH - 18, buildHeight - 18)
         runCard:ClearAllPoints()
         runCard:SetPoint("CENTER", menu, "CENTER", -(CARD_WIDTH + CARD_GAP), CARD_Y)
         menuCard:ClearAllPoints()
         menuCard:SetPoint("CENTER", menu, "CENTER", 0, CARD_Y)
         buildCard:ClearAllPoints()
-        buildCard:SetPoint("TOP", menu, "CENTER", CARD_WIDTH + CARD_GAP, CARD_Y + CARD_HEIGHT / 2)
+        buildCard:SetPoint("TOP", menu, "CENTER", CARD_WIDTH + CARD_GAP, CARD_Y + cardHeight / 2)
         runCard:Show()
         buildCard:Show()
+        menu.hint:ClearAllPoints()
+        menu.hint:SetPoint("CENTER", menu, "CENTER", 0, CARD_Y - cardHeight / 2 - 22)
     else
         menu.title:SetText("Game Menu")
         menu.subtitle:SetText("Inn")
         runCard:Hide()
         buildCard:Hide()
+        local cardHeight = max(menuCard.contentHeight or 280, 260)
+        menuCard:SetHeight(cardHeight)
+        UI.TalentArtCoords(menuCard.art, CARD_WIDTH - 18, cardHeight - 18)
         menuCard:ClearAllPoints()
         menuCard:SetPoint("CENTER", menu, "CENTER", 0, CARD_Y)
+        menu.hint:ClearAllPoints()
+        menu.hint:SetPoint("CENTER", menu, "CENTER", 0, CARD_Y - cardHeight / 2 - 22)
     end
-    LayoutButtons()
 end
 
 local paused = false

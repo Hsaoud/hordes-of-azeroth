@@ -83,6 +83,8 @@ function AccountLogin_OnShow()
 	Bonk.creating = nil;
 	Bonk.wiping = nil;
 	Bonk.heroes = {};
+	Bonk.reachedServer = false;
+	Bonk.loginTried = false;
 
 	if ( not BONK_ACCOUNT or not EULAAccepted() or not TOSAccepted() ) then
 		BonkLoginFrame:Hide();
@@ -222,7 +224,7 @@ function GlueDialog_OnEvent()
 	local shown = GlueDialogText:GetText();
 	local noServer = shown == RESPONSE_FAILED_TO_CONNECT or shown == LOGIN_FAILED or shown == LOGIN_SERVER_DOWN or shown == REALM_LIST_FAILED
 		or shown == RESPONSE_DISCONNECTED or shown == DISCONNECTED;
-	if ( noServer and not Bonk.reachedServer ) then
+	if ( noServer ) then
 		if ( BONK_COOP ) then
 			GlueDialogText:SetText("The connection to the host was interrupted. Keep the launcher open and try Connect again. If the host closed the game, ask for a new invitation.");
 		else
@@ -230,6 +232,8 @@ function GlueDialog_OnEvent()
 		end
 		GlueDialogBackground:SetHeight(32 + GlueDialogText:GetHeight() + 8 + GlueDialogButton1:GetHeight() + 16);
 		BonkLoginStatus:SetText("");
+		Bonk.reachedServer = false;
+		Bonk.loginTried = false;
 	elseif ( wipeRefused ) then
 		GlueDialogText:SetText("The account was not wiped because a hero is still left. Try again.");
 		GlueDialogBackground:SetHeight(32 + GlueDialogText:GetHeight() + 8 + GlueDialogButton1:GetHeight() + 16);

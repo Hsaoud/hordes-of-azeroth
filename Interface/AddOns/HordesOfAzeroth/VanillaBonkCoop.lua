@@ -103,6 +103,7 @@ prompt:SetFrameStrata("DIALOG")
 prompt:EnableMouse(true)
 Surface(prompt)
 prompt:Hide()
+tinsert(UISpecialFrames, "VanillaBonkMissionInvite")
 prompt.heading = UI.Text(prompt, 20, UI.TITLE_FONT)
 prompt.heading:SetPoint("TOP", prompt, "TOP", 0, -18)
 prompt.heading:SetTextColor(1, 0.82, 0.35)
@@ -116,10 +117,17 @@ prompt.note:SetTextColor(0.75, 0.72, 0.65)
 prompt.note:SetText("Accept to travel together. No need to visit the Run Master.")
 local function Answer(accept)
     if coop.token then
+        coop.answeredToken = coop.token
         SendChatMessage(".bonk coop " .. (accept and "accept " or "decline ") .. coop.token, "SAY")
     end
     prompt:Hide()
 end
+prompt:SetScript("OnHide", function()
+    if coop.token and coop.answeredToken ~= coop.token then
+        coop.answeredToken = coop.token
+        SendChatMessage(".bonk coop decline " .. coop.token, "SAY")
+    end
+end)
 prompt.accept = UI.Button(prompt, 170, "Join expedition", function() Answer(true) end)
 prompt.accept:SetPoint("BOTTOMRIGHT", prompt, "BOTTOM", -6, 17)
 prompt.decline = UI.Button(prompt, 170, "Not now", function() Answer(false) end)
@@ -137,6 +145,7 @@ invitation.edit:SetHeight(26)
 invitation.edit:SetPoint("TOPLEFT", invitation, "TOPLEFT", 32, -82)
 invitation.edit:SetAutoFocus(false)
 invitation.edit:SetScript("OnEscapePressed", function() invitation:Hide() end)
+invitation.edit:SetScript("OnEditFocusGained", function() this:HighlightText() end)
 invitation.copy = UI.Button(invitation, 180, "Copy invitation", function()
     if HoACoop_CopyInvitation and HoACoop_CopyInvitation() then
         invitation.header:SetText("Copied! Send it to your friends. They can join whenever they are ready.")
@@ -168,8 +177,11 @@ party.header:SetText("Invite heroes to your party, then choose an expedition.")
 local lobbyRows, lobbyEntries, lobbyPage = {}, {}, 0
 local function RefreshLobby()
     local count = getn(lobbyEntries)
-    lobbyPage = min(lobbyPage, max(0, ceil(count / 9) - 1))
-    party.header:SetText(count > 0 and (count .. " heroes - page " .. (lobbyPage + 1) .. "/" .. ceil(count / 9)) or "No other heroes yet. Share your invitation to welcome friends.")
+    local maxPages = max(1, ceil(count / 9))
+    lobbyPage = min(lobbyPage, maxPages - 1)
+    party.header:SetText(count > 0 and (count .. " heroes - page " .. (lobbyPage + 1) .. "/" .. maxPages) or "No other heroes yet. Share your invitation to welcome friends.")
+    if lobbyPage > 0 then party.previous:Enable() else party.previous:Disable() end
+    if lobbyPage < maxPages - 1 then party.next:Enable() else party.next:Disable() end
     for i = 1, 9 do
         local row, f = lobbyRows[i], lobbyEntries[lobbyPage * 9 + i]
         if f and not row then

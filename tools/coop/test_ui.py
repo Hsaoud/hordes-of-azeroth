@@ -147,5 +147,19 @@ Button("+"):Click()
 assert(Minimap:GetZoom() == 1)
 Button("World map"):Click()
 assert(mapOpened)
+ToggleGameMenu(true)
+assert(Button("|cffff5a4aLeave Expedition|r"):IsShown())
+Button("|cffff5a4aLeave Expedition|r"):Click()
+Button("|cffff5a4aLeave|r"):Click()
+assert(commands[getn(commands)] == ".bonk stop")
+local specialFound = false
+for _, name in ipairs(UISpecialFrames) do if name == "VanillaBonkMissionInvite" then specialFound = true end end
+assert(specialFound)
+Emit("BONK~coopprompt~0")
+Emit("BONK~coopprompt~99~Leader~Normal~Westfall~start")
+assert(VanillaBonkMissionInvite:IsShown())
+this = VanillaBonkMissionInvite
+if this.scripts.OnHide then this.scripts.OnHide() end
+assert(commands[getn(commands)] == ".bonk coop decline 99")
 ''')
 print("PASS menu actions, clipboard fallback, invitation deduplication, 25-player lobby, 40-player roster, HUD and minimap controls")

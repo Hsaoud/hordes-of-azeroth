@@ -623,7 +623,7 @@ local NAV_DIRECTIONS = { up = { 0, 1 }, down = { 0, -1 }, left = { -1, 0 }, righ
 local NAV_ACROSS_WEIGHT = 2.5
 local NAV_MIN_SIZE = 10
 local POPUP_COUNT = 4
-local EXTRA_WINDOWS = { "VanillaBonkGear", "VanillaBonkMenu", "GameMenuFrame" }
+local EXTRA_WINDOWS = { "VanillaBonkGear", "VanillaBonkMenu", "GameMenuFrame", "VanillaBonkMissionInvite", "VanillaBonkParty", "VanillaBonkInvitation" }
 local KEEP_OPEN = { VanillaBonkGear = true }
 local SKIPPED_WINDOWS = { VanillaBonkBanishEscape = true, VanillaBonkVendorEscape = true, VanillaBonkOffer = true, VanillaBonkGlyphs = true, VanillaBonkMap = true }
 
@@ -940,7 +940,7 @@ local function Step(direction, windows)
     return best or Controller.WrapStep(current, direction, windows, candidates)
 end
 
-Controller.WRAP_WINDOWS = { VanillaBonkMenu = true, GameMenuFrame = true }
+Controller.WRAP_WINDOWS = { VanillaBonkMenu = true, GameMenuFrame = true, VanillaBonkParty = true, VanillaBonkMissionInvite = true, VanillaBonkInvitation = true }
 
 function Controller.WrapStep(current, direction, windows, candidates)
     local window = WindowOf(current, windows)
