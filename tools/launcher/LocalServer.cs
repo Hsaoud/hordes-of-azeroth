@@ -378,7 +378,7 @@ namespace HordesOfAzeroth.Launcher
                     SetConfigLine(lines, "MapUpdate.Instanced.UpdateThreads", "0");
                     SetConfigLine(lines, "MapUpdate.ObjectsUpdate.MaxThreads", "1");
                     SetConfigLine(lines, "MapUpdate.VisibilityUpdate.MaxThreads", "1");
-                    SetConfigLine(lines, "PlayerLimit", "2");
+                    SetConfigLine(lines, "PlayerLimit", "0");
                 }
             }
             File.WriteAllLines(target, lines);

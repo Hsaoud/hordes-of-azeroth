@@ -223,7 +223,11 @@ function GlueDialog_OnEvent()
 	local noServer = shown == RESPONSE_FAILED_TO_CONNECT or shown == LOGIN_FAILED or shown == LOGIN_SERVER_DOWN or shown == REALM_LIST_FAILED
 		or shown == RESPONSE_DISCONNECTED or shown == DISCONNECTED;
 	if ( noServer and not Bonk.reachedServer ) then
-		GlueDialogText:SetText("The game's server isn't running. Close the game and start Hordes of Azeroth with HoALauncher.exe in your World of Warcraft folder.");
+		if ( BONK_COOP ) then
+			GlueDialogText:SetText("The connection to the host was interrupted. Keep the launcher open and try Connect again. If the host closed the game, ask for a new invitation.");
+		else
+			GlueDialogText:SetText("The game couldn't connect. Try Connect again, or close the game and restart it from HoALauncher.exe.");
+		end
 		GlueDialogBackground:SetHeight(32 + GlueDialogText:GetHeight() + 8 + GlueDialogButton1:GetHeight() + 16);
 		BonkLoginStatus:SetText("");
 	elseif ( wipeRefused ) then

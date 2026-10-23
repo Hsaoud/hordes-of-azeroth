@@ -200,7 +200,13 @@ function Invoke-PackageBuild([string]$Name) {
         }
         'version' { [System.IO.File]::WriteAllText((Join-Path $buildDir 'VERSION'), "$version`n") }
         'launcher' {
-            $project = Join-Path (Get-CommittedTree) 'tools\launcher\HordesOfAzerothLauncher.csproj'
+            $tree = Get-CommittedTree
+            $clientSource = Join-Path $tree 'tools\clientfix'
+            $clientBuild = Join-Path $clientSource 'build'
+            $cmake = Get-CMake
+            Invoke-Native 'Client recovery configure' $cmake.Exe @('-S', $clientSource, '-B', $clientBuild, '-G', $cmake.Generator, '-A', 'Win32', "-DCMAKE_GENERATOR_INSTANCE=$($cmake.Instance)")
+            Invoke-Native 'Client recovery build' $cmake.Exe @('--build', $clientBuild, '--config', 'Release', '--parallel', '4')
+            $project = Join-Path $tree 'tools\launcher\HordesOfAzerothLauncher.csproj'
             Invoke-Native 'Launcher build' 'dotnet' @('build', $project, '-c', 'Release', '-nologo', "-p:Repository=$repository", "-p:OutputPath=$(Join-Path $buildDir 'launcher')/")
         }
         'world-dump' {

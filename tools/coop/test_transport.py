@@ -82,59 +82,77 @@ def free_port():
         return probe.getsockname()[1]
 
 
+def round_trip(port):
+    with socket.create_connection(("127.0.0.1", port), timeout=20) as stream:
+        data = os.urandom(262144)
+        received = bytearray()
+        sender = threading.Thread(target=stream.sendall, args=(data,))
+        sender.start()
+        while len(received) < len(data):
+            block = stream.recv(32768)
+            assert block, "Truncated game stream"
+            received.extend(block)
+        sender.join()
+        assert received == data
+        stream.shutdown(socket.SHUT_WR)
+        assert stream.recv(1) == b""
+
+
 def tunnel_round_trip(relay_only=False):
     login, world = echo_server(), echo_server()
-    host = guest = None
+    host, guests = None, []
     try:
         host = Peer("host", loginPort=login.getsockname()[1], worldPort=world.getsockname()[1], relayOnly=relay_only)
         code = host.wait("hosting")["code"]
-        if not relay_only:
-            for invitation, version, expected in ((code, "incompatible", "version-mismatch"),):
-                rejected = Peer("join", code=invitation, version=version)
-                try:
-                    assert rejected.wait("error")["code"] == expected
-                finally:
-                    rejected.close()
-            print("PASS incompatible game versions rejected", flush=True)
-        guest_login, guest_world = free_port(), free_port()
-        guest = Peer("join", code=code, loginPort=guest_login, worldPort=guest_world, relayOnly=relay_only)
-        profile = host.wait("guest")
-        assert profile["account"].startswith("COOP") and len(profile["account"]) == 16
-        assert len(profile["password"]) == 16
-        hero_profile = {"gold": 42, "heroes": [{"name": "Testhero", "runs": 3, "bestStage": 2}]}
-        host.send({"command": "admit", "profile": hero_profile})
-        ready = guest.wait("ready")
-        assert ready["account"] == profile["account"]
-        assert ready["profile"] == hero_profile
+        rejected = Peer("join", code=code, version="incompatible")
+        try:
+            assert rejected.wait("error")["code"] == "version-mismatch"
+        finally:
+            rejected.close()
+        print("PASS incompatible game versions rejected", flush=True)
+        identities, ports = [], []
+        for index in range(4):
+            identity = os.urandom(32).hex().upper()
+            pair = free_port(), free_port()
+            identities.append(identity)
+            ports.append(pair)
+            guests.append(Peer("join", code=code, identity=identity, loginPort=pair[0], worldPort=pair[1], relayOnly=relay_only))
+        admissions = [host.wait("guest") for _ in guests]
+        profiles = {}
+        for index, admission in enumerate(reversed(admissions)):
+            assert admission["account"].startswith("COOP") and len(admission["account"]) == 16
+            assert len(admission["password"]) == 16
+            profile = {"gold": index + 42, "heroes": [{"name": "Testhero", "runs": index, "bestStage": 2}]}
+            profiles[admission["account"]] = profile
+            host.send({"command": "admit", "request": admission["request"], "profile": profile})
+        accounts = []
+        for guest in guests:
+            ready = guest.wait("ready")
+            accounts.append(ready["account"])
+            assert ready["profile"] == profiles[ready["account"]]
+        for _ in guests:
+            host.wait("connected")
+        assert len(set(accounts)) == 4
+        for pair in ports:
+            for port in pair:
+                round_trip(port)
+        print("PASS four concurrent guests, out-of-order admission and isolated hero profiles", flush=True)
+        guests[0].close()
+        guests[0] = None
+        assert host.wait("left", 20)["account"] == accounts[0]
+        round_trip(ports[1][1])
+        guests[0] = Peer("join", code=code, identity=identities[0], loginPort=ports[0][0], worldPort=ports[0][1], relayOnly=relay_only)
+        admission = host.wait("guest")
+        assert admission["account"] == accounts[0]
+        host.send({"command": "admit", "request": admission["request"], "profile": profiles[accounts[0]]})
+        assert guests[0].wait("ready")["account"] == accounts[0]
         host.wait("connected")
-        if not relay_only:
-            rejected = Peer("join", code=code)
-            try:
-                assert rejected.wait("error")["code"] == "room-full"
-            finally:
-                rejected.close()
-            print("PASS a third player is rejected while the pair stays connected", flush=True)
-        for port in (guest_login, guest_world):
-            with socket.create_connection(("127.0.0.1", port), timeout=20) as stream:
-                data = os.urandom(262144)
-                received = bytearray()
-                sender = threading.Thread(target=stream.sendall, args=(data,))
-                sender.start()
-                while len(received) < len(data):
-                    block = stream.recv(32768)
-                    assert block, "Truncated game stream"
-                    received.extend(block)
-                sender.join()
-                assert received == data
-                stream.shutdown(socket.SHUT_WR)
-                assert stream.recv(1) == b""
-        guest.close()
-        guest = None
-        host.wait("left", 15)
-        print("PASS encrypted login + world, 512 KiB lossless, half-close, guest leave; relayOnly=" + str(relay_only), flush=True)
+        round_trip(ports[0][1])
+        print("PASS guest leave and reconnect without interrupting others; relayOnly=" + str(relay_only), flush=True)
     finally:
-        if guest:
-            guest.close()
+        for guest in guests:
+            if guest:
+                guest.close()
         if host:
             host.close()
         login.close()

@@ -1,9 +1,9 @@
 local UI = VanillaBonkUI
 
 local CARD_WIDTH = 220
-local CARD_HEIGHT = 304
+local CARD_HEIGHT = 388
 local CARD_GAP = 20
-local CARD_Y = 20
+local CARD_Y = -20
 local STONE_BORDER = { edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", edgeSize = 24 }
 local BUTTON_WIDTH = 176
 local SPELL_SIZE = 40
@@ -160,6 +160,9 @@ menuCard.endRun = Button("|cffff5a4aEnd Run|r", 22, function()
     PlaySound("igMainMenuOption")
     confirm:Show()
 end)
+menuCard.invite = Button("Invite friends", 26, function() Close() UI.CopyCoopInvitation() end)
+menuCard.party = Button("Players & party", 26, function() Close() UI.OpenCoopParty() end)
+menuCard.mission = Button("Choose expedition", 26, function() Close() SlashCmdList["VANILLABONK"]("") end)
 menuCard.video = Button("Video", 22, Panel(OptionsFrame))
 menuCard.sound = Button("Sound", 22, Panel(SoundOptionsFrame))
 menuCard.interface = Button("Interface", 22, Panel(UIOptionsFrame))
@@ -185,13 +188,13 @@ menuCard.quit = Button("Exit Game", 22, function()
 end)
 
 local function LayoutButtons()
-    local order = { menuCard.resume, menuCard.endRun, false, menuCard.video, menuCard.sound, menuCard.interface,
+    local order = { menuCard.resume, menuCard.endRun, menuCard.mission, menuCard.invite, menuCard.party, false, menuCard.video, menuCard.sound, menuCard.interface,
         menuCard.bindings, menuCard.controller, false, menuCard.logout, menuCard.quit }
     local y = -22
     for _, button in ipairs(order) do
         if not button then
             y = y - 8
-        elseif button == menuCard.endRun and not run.inRun then
+        elseif (button == menuCard.endRun and not run.inRun) or (button == menuCard.mission and run.inRun) or ((button == menuCard.invite or button == menuCard.party) and not UI.Coop.enabled) then
             button:Hide()
         else
             button:ClearAllPoints()
@@ -341,7 +344,7 @@ confirm.box:SetBackdrop({
 confirm.box:SetBackdropColor(0, 0, 0, 0.95)
 confirm.question = UI.Text(confirm.box, 14)
 confirm.question:SetPoint("TOP", confirm.box, "TOP", 0, -24)
-confirm.question:SetText("End this run?")
+confirm.question:SetText("Leave this expedition?")
 confirm.text = UI.Text(confirm.box, 12)
 confirm.text:SetPoint("TOP", confirm.question, "BOTTOM", 0, -6)
 confirm.text:SetWidth(310)

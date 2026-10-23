@@ -32,6 +32,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="..\..\Interface\GlueXML\GlueXML.toc;..\..\Interface\GlueXML\BonkGlue.lua;..\..\Interface\GlueXML\BonkGlue.xml;..\..\Interface\GlueXML\BonkGluePad.lua;..\..\Interface\GlueXML\BonkGluePad.xml" LogicalName="LoginRepair.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\config\client-patches.json" LogicalName="LoginRepair.client-patches.json" />
+    <EmbeddedResource Include="..\clientfix\build\Release\HordesOfAzerothClientFix.dll" LogicalName="LoginRepair.HordesOfAzerothClientFix.dll" />
     <Compile Include="..\telegraphs\Mpq.cs" Link="Shared\Mpq.cs" />
     <Resource Include="art\background.jpg" />
     <Resource Include="art\icon.ico" />

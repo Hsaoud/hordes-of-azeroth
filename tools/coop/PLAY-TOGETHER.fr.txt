@@ -1,13 +1,24 @@
 JOUER ENSEMBLE
 
 1. Extrayez chacun votre copie du jeu, puis ouvrez HoALauncher.exe.
-2. L'un choisit « Create a game », puis « Copy invitation » et envoie ce code à son ami.
-3. L'autre choisit « Join a friend », colle le code et confirme. Le jeu s'ouvre sur les deux PC.
-4. Choisissez chacun votre héros. Au maître des expéditions, cliquez tous les deux sur « Ready together ».
+2. L'hôte choisit « Create a game ». Il peut jouer tout de suite.
+3. Dans le jeu : Échap, « Invite friends », puis envoyez le code copié à vos amis.
+4. Les amis choisissent « Join a friend » dans le lanceur et collent le code.
+5. Choisissez vos héros. Échap, « Players & party » permet de former votre groupe.
+6. Un membre choisit une expédition. Les autres acceptent la fenêtre qui apparaît : le voyage est automatique.
 
-Choisissez vos améliorations tranquillement : la pause s'applique aux deux joueurs.
-Après le boss, prenez chacun votre portail pour continuer ensemble.
+Vous pouvez arriver après le début d'une partie. Rejoignez le groupe et acceptez « Join in progress ».
+Après un refus : « Players & party », puis « Join party expedition ».
+La difficulté s'adapte aux participants. Un départ ne termine pas la mission des autres.
+Choisissez vos améliorations tranquillement : la pause s'applique à la mission.
+Après le boss, terminez vos récompenses et prenez chacun votre portail.
+Survolez les icônes pour les explications. La minimap se zoome à la molette.
 
-L'hôte doit garder le jeu ouvert. Vos héros coop sont sauvegardés chez lui : retrouvez le même hôte pour continuer votre progression.
-
+L'hôte doit garder le jeu et le lanceur ouverts. Vos héros coop sont sauvegardés chez lui.
+Retrouvez le même hôte pour continuer votre progression.
 Pour jouer seul, utilisez « Play ».
+
+Si l'ancien écran de connexion WoW apparaît malgré tout : laissez le compte affiché,
+saisissez 123 dans le mot de passe et cliquez sur Login. Ce code de secours utilise
+votre profil automatique. Il nécessite cette version corrigée et le lanceur ouvert.
+Il ne remplace pas le code d'invitation et ne reconnecte pas un hôte qui a fermé son jeu.

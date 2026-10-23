@@ -26,6 +26,7 @@ with zipfile.ZipFile(package) as archive:
             raise ValueError("Empty required file: " + relative)
     for relative, compiled in (
         ("HoALauncher.exe", "tools/launcher/bin/HoALauncher.exe"),
+        ("HordesOfAzerothClientFix.dll", "tools/clientfix/build/Release/HordesOfAzerothClientFix.dll"),
         ("tools/hoa-coop.exe", "tools/coop/target/release/hoa-coop.exe"),
         ("server/run/mangosd.exe", "server/run/mangosd.exe"),
         ("server/run/realmd.exe", "server/run/realmd.exe"),
@@ -33,6 +34,15 @@ with zipfile.ZipFile(package) as archive:
     ):
         if hashlib.sha256(archive.read(prefix + relative)).digest() != hashlib.sha256((root / compiled).read_bytes()).digest():
             raise ValueError("Outdated packaged file: " + relative)
+    for relative in ("VanillaBonkNavigation.lua", "VanillaBonkMenu.lua", "VanillaBonkTracker.lua"):
+        local = root / "Interface" / "AddOns" / "HordesOfAzeroth" / relative
+        if archive.read(prefix + "Interface/AddOns/HordesOfAzeroth/" + relative) != local.read_bytes():
+            raise ValueError("Outdated interface: " + relative)
+    if prefix + "HordesOfAzeroth/coop-invitation.txt" in names:
+        raise ValueError("A private invitation was included in the package")
+    for name in ("GlueXML.toc", "BonkGlue.lua", "BonkGlue.xml", "BonkGluePad.lua", "BonkGluePad.xml"):
+        if archive.read(prefix + "Interface/GlueXML/" + name) != (root / "Interface/GlueXML" / name).read_bytes():
+            raise ValueError("Outdated login interface: " + name)
     fingerprint = archive.read(prefix + "HordesOfAzeroth/coop-build.txt").decode("ascii").strip()
     if fingerprint.lower() != hashlib.sha256(archive.read(prefix + "server/run/mangosd.exe")).hexdigest():
         raise ValueError("Incorrect compatibility fingerprint")

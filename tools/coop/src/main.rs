@@ -6,16 +6,16 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::{net::Ipv4Addr, sync::Arc, time::Duration};
+use std::{collections::{HashMap, HashSet}, net::Ipv4Addr, sync::Arc, time::Duration};
 use subtle::ConstantTimeEq;
-use tokio::{io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader}, net::{TcpListener, TcpStream}, sync::{Semaphore, mpsc}, time::timeout};
+use tokio::{io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader}, net::{TcpListener, TcpStream}, sync::{Semaphore, mpsc, oneshot}, time::timeout};
 use tokio_util::sync::CancellationToken;
 
 const ALPN: &[u8] = b"hordes-of-azeroth/coop/1";
 const MAX_CONTROL: usize = 8192;
 const DEADLINE: Duration = Duration::from_secs(45);
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Config {
     mode: String,
@@ -87,29 +87,45 @@ fn account_for(id: EndpointId) -> String {
     format!("COOP{}", &text[..12])
 }
 
-async fn serve_guest(conn: iroh::endpoint::Connection, cfg: &Config, secret: &[u8; 16], commands: &mut mpsc::Receiver<Value>) -> Result<()> {
+struct Admission {
+    request: u64,
+    account: String,
+    password: String,
+    reply: oneshot::Sender<Value>,
+}
+
+async fn reject_guest(send: &mut iroh::endpoint::SendStream, code: &str) -> Result<()> {
+    write_json(send, &json!({"error":code})).await?;
+    send.finish()?;
+    let _ = timeout(Duration::from_secs(5), send.stopped()).await;
+    Ok(())
+}
+
+async fn serve_guest(conn: iroh::endpoint::Connection, cfg: &Config, secret: &[u8; 16], request: u64, admissions: mpsc::Sender<Admission>, handshake: tokio::sync::OwnedSemaphorePermit) -> Result<()> {
     let (mut send, mut recv) = timeout(DEADLINE, conn.accept_bi()).await??;
     let hello: Hello = timeout(DEADLINE, read_json(&mut recv)).await??;
     let supplied = data_encoding::HEXUPPER.decode(hello.secret.as_bytes()).unwrap_or_default();
     if !bool::from(supplied.as_slice().ct_eq(secret)) {
-        write_json(&mut send, &json!({"error":"invalid-code"})).await?;
+        reject_guest(&mut send, "invalid-code").await?;
         bail!("invalid-code")
     }
     if hello.version != cfg.version {
-        write_json(&mut send, &json!({"error":"version-mismatch"})).await?;
+        reject_guest(&mut send, "version-mismatch").await?;
         bail!("version-mismatch")
     }
     if hello.password.len() != 16 || !hello.password.bytes().all(|c| c.is_ascii_hexdigit()) { bail!("invalid-profile") }
     let account = account_for(conn.remote_id());
     let password = hello.password;
-    event(json!({"event":"guest", "account":account, "password":password}));
-    let admitted = timeout(DEADLINE, commands.recv()).await?.context("launcher-closed")?;
+    drop(handshake);
+    let (reply, receive) = oneshot::channel();
+    admissions.send(Admission { request, account: account.clone(), password: password.clone(), reply }).await?;
+    let admitted = timeout(Duration::from_secs(150), receive).await??;
     if admitted["command"] != "admit" {
-        write_json(&mut send, &json!({"error":"host-not-ready"})).await?;
+        reject_guest(&mut send, "host-not-ready").await?;
         bail!("host-not-ready")
     }
     write_json(&mut send, &json!({"ready":true, "account":account, "password":password, "profile":admitted.get("profile")})).await?;
-    event(json!({"event":"connected"}));
+    event(json!({"event":"connected", "account":account}));
     let limit = Arc::new(Semaphore::new(8));
     let mut streams = tokio::task::JoinSet::new();
     loop {
@@ -138,38 +154,57 @@ async fn host(endpoint: &Endpoint, cfg: &Config, commands: &mut mpsc::Receiver<V
     rand::rng().fill_bytes(&mut secret);
     timeout(DEADLINE, endpoint.online()).await?;
     event(json!({"event":"hosting", "code":ticket::encode(endpoint.id().as_bytes(), &secret)}));
-    while let Some(incoming) = endpoint.accept().await {
-        let conn = match timeout(Duration::from_secs(15), incoming).await {
-            Ok(Ok(conn)) => conn,
-            _ => continue,
-        };
-        let active = serve_guest(conn.clone(), cfg, &secret, commands);
-        tokio::pin!(active);
-        loop {
-            tokio::select! {
-                result = &mut active => {
-                    conn.close(0u32.into(), b"guest-left");
-                    if result.is_err() { event(json!({"event":"left"})); }
-                    break;
+    let (admit_tx, mut admit_rx) = mpsc::channel::<Admission>(32);
+    let handshakes = Arc::new(Semaphore::new(32));
+    let mut guests = tokio::task::JoinSet::new();
+    let mut pending = HashMap::new();
+    let mut identities = HashSet::new();
+    let mut next_request = 0u64;
+    loop {
+        tokio::select! {
+            incoming = endpoint.accept() => {
+                let Some(incoming) = incoming else { break };
+                let Ok(permit) = handshakes.clone().try_acquire_owned() else { incoming.refuse(); continue };
+                next_request += 1;
+                let request = next_request;
+                let config = cfg.clone();
+                let admissions = admit_tx.clone();
+                guests.spawn(async move {
+                    let connection = timeout(Duration::from_secs(15), incoming).await;
+                    if let Ok(Ok(conn)) = connection {
+                        let result = serve_guest(conn.clone(), &config, &secret, request, admissions, permit).await;
+                        conn.close(0u32.into(), b"session-ended");
+                        let _ = result;
+                    }
+                    request
+                });
+            }
+            Some(admission) = admit_rx.recv() => {
+                if !identities.insert(admission.account.clone()) {
+                    let _ = admission.reply.send(json!({"command":"reject"}));
+                    continue;
                 }
-                incoming = endpoint.accept() => {
-                    if let Some(incoming) = incoming {
-                        tokio::spawn(async move {
-                            let _ = timeout(Duration::from_secs(5), async move {
-                                let conn = incoming.await?;
-                                let (mut send, mut recv) = conn.accept_bi().await?;
-                                let _: Hello = read_json(&mut recv).await?;
-                                write_json(&mut send, &json!({"error":"room-full"})).await?;
-                                send.shutdown().await?;
-                                let _ = conn.closed().await;
-                                Ok::<_, anyhow::Error>(())
-                            }).await;
-                        });
+                event(json!({"event":"guest", "request":admission.request.to_string(), "account":admission.account, "password":admission.password}));
+                pending.insert(admission.request, (admission.account, Some(admission.reply)));
+            }
+            command = commands.recv() => {
+                let Some(command) = command else { break };
+                let request = command["request"].as_str().and_then(|value| value.parse::<u64>().ok());
+                if let Some((_, sender)) = request.and_then(|id| pending.get_mut(&id)) {
+                    if let Some(sender) = sender.take() { let _ = sender.send(command); }
+                }
+            }
+            Some(result) = guests.join_next(), if !guests.is_empty() => {
+                if let Ok(request) = result {
+                    if let Some((account, _)) = pending.remove(&request) {
+                        identities.remove(&account);
+                        event(json!({"event":"left", "account":account}));
                     }
                 }
             }
         }
     }
+    guests.abort_all();
     Ok(())
 }
 
@@ -180,7 +215,7 @@ async fn join(endpoint: &Endpoint, cfg: &Config) -> Result<()> {
     let (mut send, mut recv) = conn.open_bi().await?;
     let password = data_encoding::HEXUPPER.encode(&Sha256::digest(endpoint.secret_key().to_bytes()));
     write_json(&mut send, &Hello { version: cfg.version.clone(), secret: data_encoding::HEXUPPER.encode(&secret), password: password[..16].to_owned() }).await?;
-    let reply: Value = timeout(DEADLINE, read_json(&mut recv)).await??;
+    let reply: Value = timeout(Duration::from_secs(150), read_json(&mut recv)).await??;
     if let Some(error) = reply["error"].as_str() { bail!("{error}") }
     if reply["ready"] != true { bail!("host-not-ready") }
     let login = TcpListener::bind((Ipv4Addr::LOCALHOST, cfg.login_port)).await.context("local-port-in-use")?;

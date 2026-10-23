@@ -4,11 +4,12 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import zipfile
 
 
 root = Path(__file__).resolve().parent.parent
-output = root / "release" / "coop"
+output = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else root / "release" / "coop"
 output.mkdir(parents=True, exist_ok=True)
 source = output / "HordesOfAzeroth-Coop-Sources.zip"
 with zipfile.ZipFile(source, "w", zipfile.ZIP_DEFLATED, strict_timestamps=False) as archive:

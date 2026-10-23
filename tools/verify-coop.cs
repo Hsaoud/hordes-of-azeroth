@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,18 +18,18 @@ static class VerifyCoop
         object folder = create("GameFolder", new object[] { Path.GetFullPath(args[1]) });
         object server = create("LocalServer", new[] { folder });
         server.GetType().GetProperty("CoopEnabled").SetValue(server, true);
-        string[] accounts = { "COOPFFFFFFFFFFF1", "COOPFFFFFFFFFFF2" };
+        string[] accounts = { "COOPFFFFFFFFFFF1", "COOPFFFFFFFFFFF2", "COOPFFFFFFFFFFF3" };
         bool fixturesCreated = false;
         try
         {
-            Console.WriteLine("Starting the real game server for two simulated clients");
+            Console.WriteLine("Starting the real game server for three simulated clients");
             await (Task)invoke(server, "StartAsync", new object[] { new Progress<string>(Console.WriteLine), CancellationToken.None });
             string config = File.ReadAllText(Path.Combine(args[1], "server", "run", "mangosd.conf"));
             foreach (string key in new[] { "Bonk.Coop", "PlayerLimit", "MapUpdate.Instanced.UpdateThreads", "AllowTwoSide.Interaction.Group" })
                 if (Regex.Matches(config, @"(?m)^\s*" + Regex.Escape(key) + @"\s*=").Count != 1)
                     throw new InvalidDataException("Duplicate config: " + key);
             Console.WriteLine("PASS one effective value per co-op server setting");
-            var fixtures = new object[2];
+            var fixtures = new object[accounts.Length];
             for (int i = 0; i < accounts.Length; i++)
             {
                 var exists = (Task<string>)invoke(server, "QueryAsync", new object[] { "realmd", "SELECT COUNT(*) FROM account WHERE username = '" + accounts[i] + "'" });
@@ -44,13 +43,7 @@ static class VerifyCoop
                 await (Task)invoke(server, "ReadHeroProfileAsync", new object[] { accounts[i] });
                 if (args.Length > 4 && args[4] == "--extended")
                     await (Task)invoke(server, "RunConsoleAsync", new object[] { "account set gmlevel " + accounts[i] + " 6" });
-                byte[] key = new byte[40];
-                using (var random = RandomNumberGenerator.Create()) random.GetBytes(key);
-                string hex = BitConverter.ToString(key).Replace("-", "");
-                Array.Reverse(key);
-                string databaseKey = BitConverter.ToString(key).Replace("-", "");
-                await (Task<string>)invoke(server, "QueryAsync", new object[] { "realmd", "UPDATE account SET sessionkey='" + databaseKey + "', last_login=NOW(), last_ip='127.0.0.1', os='Win', platform='x86' WHERE username='" + accounts[i] + "'" });
-                fixtures[i] = new { account = accounts[i], key = hex, name = i == 0 ? "Coopalpha" : "Coopbeta", race = i == 0 ? 1 : 2, heroClass = i == 0 ? 8 : 1, extended = args.Length > 4 && args[4] == "--extended" };
+                fixtures[i] = new { account = accounts[i], password = "COOPTESTPASS1234", name = new[] { "Coopalpha", "Coopbeta", "Coopgamma" }[i], race = i == 1 ? 2 : 1, heroClass = i == 1 ? 1 : 8, extended = args.Length > 4 && args[4] == "--extended" };
             }
             using (Process process = Process.Start(new ProcessStartInfo(args[2], "\"" + Path.GetFullPath(args[3]) + "\"") { UseShellExecute = false, RedirectStandardInput = true, CreateNoWindow = true }))
             {
@@ -69,8 +62,11 @@ static class VerifyCoop
                     await (Task)invoke(server, "RunConsoleAsync", new object[] { "account delete " + account });
                     uint accountId;
                     if (uint.TryParse(id, out accountId))
+                    {
+                        await (Task<string>)invoke(server, "QueryAsync", new object[] { "realmd", "DELETE FROM account_access WHERE id=" + accountId });
                         foreach (string table in new[] { "bonk_account", "bonk_account_mastery", "bonk_account_mastery_node", "bonk_account_quest", "bonk_account_starter", "bonk_account_talent", "bonk_account_tier", "bonk_account_upgrade" })
                             await (Task<string>)invoke(server, "QueryAsync", new object[] { "characters", "DELETE FROM " + table + " WHERE account=" + accountId });
+                    }
                 }
             await (Task)invoke(server, "StopAsync", new object[0]);
         }

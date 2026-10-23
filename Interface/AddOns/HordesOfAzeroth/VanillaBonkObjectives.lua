@@ -149,7 +149,7 @@ local function PlaceOnMinimap(objective, north, west, mapId)
     local right = (west - objective.shownY) * perYard
     local up = (objective.shownX - north) * perYard
     local rim = radius - PIN_SIZE / 2 - 2
-    local distance = sqrt(right * right + up * up)
+    local distance = (UI.NavigationSquare and max(abs(right), abs(up)) or sqrt(right * right + up * up))
     if distance > rim then
         right, up = right * rim / distance, up * rim / distance
         pin:SetAlpha(0.75)

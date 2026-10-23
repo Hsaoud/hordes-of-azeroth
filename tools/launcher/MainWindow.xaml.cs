@@ -968,7 +968,7 @@ namespace HordesOfAzeroth.Launcher
 
         async Task RepairBeforePlayAsync()
         {
-            if (m_latest == null)
+            if (m_latest == null || m_updates.IsStandaloneCoop)
                 return;
             bool checking = true;
             bool repairing = false;
@@ -999,7 +999,7 @@ namespace HordesOfAzeroth.Launcher
             {
                 await m_server.StartAsync(progress, CancellationToken.None);
             }
-            catch (WorldDatabaseException) when (!m_folder.IsDevelopmentTree)
+            catch (WorldDatabaseException) when (!m_folder.IsDevelopmentTree && !m_updates.IsStandaloneCoop)
             {
                 StatusText.Text = "Reloading the world";
                 StatusDetail.Text = "   the world database didn't match the server (about a minute)";
@@ -1051,7 +1051,7 @@ namespace HordesOfAzeroth.Launcher
             HostCoopButton.Visibility = Visibility.Visible;
             ChooseJoinButton.Visibility = Visibility.Visible;
             CoopJoinForm.Visibility = Visibility.Collapsed;
-            CoopHint.Text = "Survive together with a friend. Create a game or join their invitation.";
+            CoopHint.Text = "Open a world for your friends, or join their invitation.";
         }
 
         async Task StartCoopAsync(bool host)
@@ -1075,7 +1075,6 @@ namespace HordesOfAzeroth.Launcher
                 CoopHint.Text = text;
                 if (m_state == LauncherState.Playing)
                 {
-                    ShowFromTray();
                     StatusDetail.Text = "   " + text;
                 }
             }));
@@ -1098,17 +1097,17 @@ namespace HordesOfAzeroth.Launcher
                     CoopCode.Text = code;
                     CoopCode.Visibility = Visibility.Visible;
                     CopyCoopButton.Visibility = Visibility.Visible;
-                    CoopHint.Text = "Send this invitation to your friend. The game opens for both of you when they join.";
-                    StatusText.Text = "Waiting for your friend";
+                    CoopHint.Text = "Your game is open. Friends can join at any time using this invitation.";
+                    StatusText.Text = "Starting your open game";
                     Progress.IsIndeterminate = false;
                     Progress.Visibility = Visibility.Hidden;
-                    await m_coop.WaitForGuestAsync(cancel);
+
                 }
                 else
                     await m_coop.JoinAsync(invitation, cancel);
                 cancel.ThrowIfCancellationRequested();
-                CoopHint.Text = "You're connected! Choose your heroes, then get ready together at the Run Master.";
-                m_game.Prepare(m_settings.Widescreen, m_coop.Account, m_coop.Password, true, m_coop.HeroProfile);
+                CoopHint.Text = "Form your party in game. Mission invitations appear for everyone in your group.";
+                m_game.Prepare(m_settings.Widescreen, m_coop.Account, m_coop.Password, true, m_coop.HeroProfile, m_coop.Invitation);
                 await m_game.StartAsync(cancel);
                 await WatchRunningGameAsync();
             }
@@ -1137,7 +1136,7 @@ namespace HordesOfAzeroth.Launcher
             CoopLobby.Visibility = Visibility.Collapsed;
             CoopChoices.Visibility = Visibility.Visible;
             BackFromJoinCoop_Click(null, null);
-            CoopHint.Text = "Survive together with a friend. Co-op heroes are saved on the host's PC. Rejoin the same host to continue their progress.";
+            CoopHint.Text = "Friends can join at any time. Co-op heroes are saved on the host's PC; rejoin the same host to continue.";
             CoopCode.Clear();
         }
 

@@ -55,7 +55,7 @@
                 <StackPanel Margin="22,18">
                     <TextBlock Text="BETTER TOGETHER" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Accent}" />
                     <TextBlock Text="Online co-op" FontSize="25" FontWeight="SemiBold" Margin="0,4,0,8" />
-                    <TextBlock x:Name="CoopHint" Text="Survive together with a friend. Create a game or paste their invitation to join." TextWrapping="Wrap" FontSize="13" Foreground="{StaticResource Muted}" Margin="0,0,0,14" />
+                    <TextBlock x:Name="CoopHint" Text="Start playing now. Friends can join your world whenever they are ready." TextWrapping="Wrap" FontSize="13" Foreground="{StaticResource Muted}" Margin="0,0,0,14" />
                     <StackPanel x:Name="CoopChoices">
                         <Button x:Name="HostCoopButton" Content="Create a game" Style="{StaticResource PrimaryButton}" Height="46" FontSize="17" Click="HostCoop_Click" />
                         <Button x:Name="ChooseJoinButton" Content="Join a friend" Style="{StaticResource MoreButton}" Height="40" Margin="0,8,0,0" Click="ChooseJoinCoop_Click" />
@@ -71,7 +71,7 @@
                         <Button x:Name="CopyCoopButton" Content="Copy invitation" Style="{StaticResource MoreButton}" Height="38" Margin="0,8,0,0" Click="CopyCoop_Click" />
                         <Button x:Name="CancelCoopButton" Content="Cancel" Style="{StaticResource MoreButton}" Height="36" Margin="0,8,0,0" Click="CancelCoop_Click" />
                     </StackPanel>
-                    <TextBlock Text="2 players · Private invitation · No account needed" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,14,0,0" />
+                    <TextBlock Text="Open session · Private invitation · No account needed" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,14,0,0" />
                 </StackPanel>
             </Border>
 

@@ -7,15 +7,17 @@ import sys
 import threading
 import time
 import zlib
+from auth_client import authenticate
 
 
 class Client:
     def __init__(self, fixture):
         self.fixture = fixture
-        self.key = bytes.fromhex(fixture["key"])
+        self.key = authenticate(fixture["account"], fixture["password"]) if "password" in fixture else bytes.fromhex(fixture["key"])
         self.send_index = self.send_last = self.recv_index = self.recv_last = 0
         self.crypted = False
         self.messages = []
+        self.system = []
         self.packets = []
         self.position = (16242.1, 16304.9, 20.899, 6.1865)
         self.lock = threading.Lock()
@@ -87,6 +89,8 @@ class Client:
                     self.send(199, self.guid + counter + struct.pack("<I", 0))
                 if opcode == 150:
                     for field in data.split(b"\0"):
+                        if len(field) > 8:
+                            self.system.append(field.decode("utf-8", errors="replace"))
                         if b"BONK~" in field:
                             text = field[field.index(b"BONK~"):].decode("utf-8", errors="replace")
                             self.messages.append(text)

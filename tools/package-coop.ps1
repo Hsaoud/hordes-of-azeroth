@@ -1,11 +1,12 @@
 param(
     [string]$GameFolder,
+    [string]$OutputDirectory,
     [switch]$SkipBuild,
     [switch]$ReusePreparedGame
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$outputRoot = Join-Path $projectRoot 'release\coop'
+$outputRoot = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $projectRoot 'release\coop' }
 $overlay = Join-Path $outputRoot 'overlay'
 $serverBuild = Join-Path $projectRoot 'server\build-coop'
 $localCargo = Join-Path $PSScriptRoot 'coop\.cargo\bin\cargo.exe'
@@ -21,6 +22,8 @@ function Invoke-Checked([string]$Exe, [string[]]$Arguments) {
 }
 
 if (-not $SkipBuild) {
+    & (Join-Path $PSScriptRoot 'build-clientfix.ps1')
+    if ($LASTEXITCODE -ne 0) { throw 'The native client build failed.' }
     Invoke-Checked $cargo @('build', '--release', '--locked', '--manifest-path', (Join-Path $PSScriptRoot 'coop\Cargo.toml'))
     Invoke-Checked 'dotnet' @('build', (Join-Path $PSScriptRoot 'launcher\HordesOfAzerothLauncher.csproj'), '-c', 'Release', '--nologo')
     if (-not (Test-Path (Join-Path $serverBuild 'CMakeCache.txt'))) {
@@ -32,11 +35,12 @@ if (-not $SkipBuild) {
     Invoke-Checked 'cmake' @('--build', $serverBuild, '--config', 'Release', '--parallel', '4')
 }
 Invoke-Checked 'cmake' @('--install', $serverBuild, '--config', 'Release')
-Invoke-Checked 'python' @((Join-Path $PSScriptRoot 'package-source.py'))
+Invoke-Checked 'python' @((Join-Path $PSScriptRoot 'package-source.py'), $outputRoot)
 
 New-Item -ItemType Directory -Force $overlay, (Join-Path $overlay 'tools'), (Join-Path $overlay 'server\run'), (Join-Path $overlay 'HordesOfAzeroth'), (Join-Path $overlay 'Interface'), (Join-Path $overlay 'config') | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'coop\target\release\hoa-coop.exe') -Destination (Join-Path $overlay 'tools\hoa-coop.exe') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'launcher\bin\HoALauncher.exe') -Destination $overlay -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'clientfix\build\Release\HordesOfAzerothClientFix.dll') -Destination $overlay -Force
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 $vsInstance = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
 $redist = Get-ChildItem (Join-Path $vsInstance 'VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT') -Directory | Sort-Object FullName -Descending | Select-Object -First 1
@@ -90,6 +94,8 @@ if ($GameFolder) {
     }
     & robocopy $overlay $destination /E /R:1 /W:1 /NFL /NDL /NJH /NJS
     if ($LASTEXITCODE -ge 8) { throw 'The co-op overlay did not copy.' }
+    $invitationFile = Join-Path $destination 'HordesOfAzeroth\coop-invitation.txt'
+    if (Test-Path -LiteralPath $invitationFile) { Remove-Item -LiteralPath $invitationFile }
     $gameZip = Join-Path $outputRoot 'HordesOfAzeroth-Coop.zip'
     if (Test-Path -LiteralPath $gameZip) {
         if (-not $ReusePreparedGame) { throw 'A complete game archive already exists.' }

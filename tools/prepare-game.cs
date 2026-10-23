@@ -45,7 +45,8 @@ static class PrepareGame
             var fetch = (Task)Invoke(updates, "FetchAsync");
             await fetch;
             object manifest = fetch.GetType().GetProperty("Result").GetValue(fetch);
-            await (Task)Invoke(installer, "InstallAsync", manifest, Progress("InstallProgress"), CancellationToken.None);
+            bool complete = (bool)installer.GetType().GetProperty("IsComplete").GetValue(installer);
+            await (Task)Invoke(installer, complete ? "UpdateAsync" : "InstallAsync", manifest, Progress("InstallProgress"), CancellationToken.None);
             object nav = New("NavBuilder", folder);
             foreach (object group in (IEnumerable)Field(manifest, "NavGroups"))
             {

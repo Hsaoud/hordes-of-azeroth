@@ -20,32 +20,44 @@ tracker.timer:SetPoint("TOP", tracker, "TOP", 0, -4)
 tracker.stage = UI.Text(tracker, 11)
 tracker.stage:SetPoint("TOP", tracker.timer, "BOTTOM", 0, -3)
 
+tracker.progress = CreateFrame("StatusBar", nil, tracker)
+tracker.progress:SetPoint("TOP", tracker.stage, "BOTTOM", 0, -7)
+tracker.progress:SetWidth(240)
+tracker.progress:SetHeight(4)
+tracker.progress:SetStatusBarTexture(UI.FLAT)
+tracker.progress:SetMinMaxValues(0, 1)
+tracker.progress:SetStatusBarColor(0.85, 0.65, 0.25)
 local BEAT_WALL, BEAT_MINIBOSS = 2, 3
 local BEAT_ICONS = { [BEAT_WALL] = "Ability_Warrior_Challange", [BEAT_MINIBOSS] = "Ability_Rogue_Eviscerate" }
 
 local list = CreateFrame("Frame", "VanillaBonkRewards", UIParent)
-list:SetWidth(200)
-list:SetHeight(80)
+list:SetWidth(242)
+list:SetHeight(140)
 list:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -10, -196)
+list:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+list:SetBackdropColor(0.045, 0.035, 0.025, 0.94)
+list:SetBackdropBorderColor(0.72, 0.55, 0.28, 0.9)
 list:Hide()
 
 local rows = {}
 local function Row(index, label, icon, tooltip)
     local row = CreateFrame("Frame", nil, list)
-    row:SetWidth(200)
-    row:SetHeight(19)
-    row:SetPoint("TOPRIGHT", list, "TOPRIGHT", 0, -(index - 1) * 19)
+    row:SetWidth((index == 1 or index == 3) and 106 or 218)
+    row:SetHeight(26)
+    local points = { {12, -10}, {12, -101}, {128, -10}, {12, -40}, {12, -70} }
+    row:SetPoint("TOPLEFT", list, "TOPLEFT", points[index][1], points[index][2])
     row.icon = row:CreateTexture(nil, "ARTWORK")
     row.icon:SetTexture(UI.ICON_PATH .. icon)
-    row.icon:SetWidth(15)
-    row.icon:SetHeight(15)
-    row.icon:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+    row.icon:SetWidth(22)
+    row.icon:SetHeight(22)
+    row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
     row.value = UI.Text(row, 12)
-    row.value:SetPoint("RIGHT", row.icon, "LEFT", -6, 0)
+    row.value:SetPoint("LEFT", row.icon, "RIGHT", 7, 0)
     row.label = UI.Text(row, 12)
     row.label:SetPoint("RIGHT", row.value, "LEFT", -5, 0)
     row.label:SetTextColor(1, 0.82, 0)
     row.label:SetText(label)
+    row.label:Hide()
     row:EnableMouse(true)
     row.tooltip = tooltip
     row:SetScript("OnEnter", function()
@@ -83,6 +95,13 @@ local greed = Row(5, "Greed", "Spell_Nature_EarthBindTotem", function()
     GameTooltip:AddLine("Every Greed Totem taken this run adds a stack.", 1, 0.82, 0, 1)
 end)
 greed:Hide()
+valor.progress = CreateFrame("StatusBar", nil, valor)
+valor.progress:SetPoint("BOTTOMLEFT", valor, "BOTTOMLEFT", 29, -2)
+valor.progress:SetWidth(150)
+valor.progress:SetHeight(3)
+valor.progress:SetStatusBarTexture(UI.FLAT)
+valor.progress:SetMinMaxValues(0, 1)
+valor.progress:SetStatusBarColor(1, 0.82, 0.35)
 
 local function Refresh()
     local elapsed = run.elapsed or 0
@@ -101,6 +120,9 @@ local function Refresh()
         stage = stage .. "  |cff9d9d9d·|r  " .. run.difficulty
     end
     tracker.stage:SetText(stage)
+    tracker.progress:SetValue(min(1, elapsed / max(1, run.duration)))
+    tracker.progress:SetStatusBarColor(run.boss and 1 or 0.85, run.boss and 0.25 or 0.65, 0.25)
+    valor.progress:SetValue(min(1, (run.valor or 0) / max(1, tonumber(run.chest) or 1)))
 
     kills.value:SetText(run.kills or 0)
     valor.value:SetText("|cffffe873" .. (run.valor or 0) .. "|r |cff9d9d9d/ " .. (run.chest or "?") .. "|r")
@@ -113,7 +135,8 @@ local function Refresh()
         greed:Hide()
     end
     for _, row in ipairs(rows) do
-        row:SetWidth(row.label:GetStringWidth() + row.value:GetStringWidth() + 15 + 11 + 4)
+        row.value:SetWidth(row:GetWidth() - 29)
+        row.value:SetJustifyH("LEFT")
     end
 end
 

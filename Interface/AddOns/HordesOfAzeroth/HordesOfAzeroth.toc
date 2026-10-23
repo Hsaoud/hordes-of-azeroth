@@ -13,6 +13,7 @@ VanillaBonkBars.lua
 VanillaBonkPlates.lua
 VanillaBonkBoss.lua
 VanillaBonkTracker.lua
+VanillaBonkNavigation.lua
 VanillaBonkObjectives.lua
 VanillaBonkMap.lua
 VanillaBonkShrines.lua

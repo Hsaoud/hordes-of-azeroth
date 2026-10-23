@@ -20,11 +20,13 @@ namespace HordesOfAzeroth.Launcher
         Process m_process;
         bool m_disposed;
         bool m_joined;
+        readonly SemaphoreSlim m_admissions = new SemaphoreSlim(4);
 
         public bool IsHost { get; private set; }
         public string Account { get; private set; } = "PLAYER";
         public string Password { get; private set; }
         public string HeroProfile { get; private set; }
+        public string Invitation { get; private set; }
         public event Action<string> StatusChanged;
 
         public CoopSession(GameFolder folder, LocalServer server)
@@ -39,27 +41,24 @@ namespace HordesOfAzeroth.Launcher
             Password = RandomHex(8);
             await m_server.EnsureAccountAsync(Account, Password);
             Start("host", "");
-            return await WithDeadline(m_hosted.Task, cancel);
+            Invitation = await WithDeadline(m_hosted.Task, cancel);
+            return Invitation;
         }
 
         public async Task JoinAsync(string code, CancellationToken cancel)
         {
             IsHost = false;
+            string normalized = System.Text.RegularExpressions.Regex.Replace((code ?? "").ToUpperInvariant(), @"[\s-]", "");
+            if (!normalized.StartsWith("HOA1") || normalized.Length != 84)
+                throw new InvalidOperationException("This invitation is incomplete. Copy the full code from your friend.");
+            Invitation = "HOA1-" + normalized.Substring(4);
             Start("join", code.Trim());
             await WithDeadline(m_ready.Task, cancel);
         }
 
-        public Task WaitForGuestAsync(CancellationToken cancel) => WaitForGuestCoreAsync(cancel);
-
-        async Task WaitForGuestCoreAsync(CancellationToken cancel)
-        {
-            using (cancel.Register(() => m_ready.TrySetCanceled()))
-                await m_ready.Task;
-        }
-
         static async Task<T> WithDeadline<T>(Task<T> task, CancellationToken cancel)
         {
-            Task delay = Task.Delay(TimeSpan.FromSeconds(70), cancel);
+            Task delay = Task.Delay(TimeSpan.FromSeconds(165), cancel);
             if (await Task.WhenAny(task, delay) != task)
             {
                 cancel.ThrowIfCancellationRequested();
@@ -125,15 +124,7 @@ namespace HordesOfAzeroth.Launcher
                         case "guest":
                             if (!IsHost)
                                 throw new InvalidDataException("Unexpected co-op response.");
-                            StatusChanged?.Invoke("Your friend is joining…");
-                            string account = Value(message, "account");
-                            await m_server.EnsureAccountAsync(account, Value(message, "password"));
-                            object profile = await m_server.ReadHeroProfileAsync(account);
-                            if (!m_disposed)
-                            {
-                                m_process.StandardInput.WriteLine(m_json.Serialize(new { command = "admit", profile }));
-                                m_process.StandardInput.Flush();
-                            }
+                            AdmitGuestAsync(message);
                             break;
                         case "ready":
                             Account = Value(message, "account");
@@ -163,6 +154,40 @@ namespace HordesOfAzeroth.Launcher
                 if (!m_disposed)
                     Fail(e.Message);
             }
+        }
+
+        async void AdmitGuestAsync(Dictionary<string, object> message)
+        {
+            string request = Value(message, "request");
+            await m_admissions.WaitAsync();
+            try
+            {
+                if (m_disposed) return;
+                StatusChanged?.Invoke("A friend is joining your game…");
+                string account = Value(message, "account");
+                await m_server.EnsureAccountAsync(account, Value(message, "password"));
+                object profile = await m_server.ReadHeroProfileAsync(account);
+                if (!m_disposed)
+                {
+                    m_process.StandardInput.WriteLine(m_json.Serialize(new { command = "admit", request, profile }));
+                    m_process.StandardInput.Flush();
+                }
+            }
+            catch (Exception e) when (!(e is OutOfMemoryException))
+            {
+                if (!m_disposed)
+                {
+                    try
+                    {
+                        m_process.StandardInput.WriteLine(m_json.Serialize(new { command = "reject", request }));
+                        m_process.StandardInput.Flush();
+                    }
+                    catch (IOException) { }
+                    catch (InvalidOperationException) { }
+                    StatusChanged?.Invoke("A friend couldn't join. They can retry with the same invitation.");
+                }
+            }
+            finally { m_admissions.Release(); }
         }
 
         static string Value(Dictionary<string, object> message, string key) => message.TryGetValue(key, out object value) ? value as string ?? "" : "";
@@ -203,7 +228,7 @@ namespace HordesOfAzeroth.Launcher
                 case "version-mismatch": return "You have different versions of the game. Update both copies and create a new invitation.";
                 case "host-not-ready": return "Your friend's game isn't ready yet. Try again in a moment.";
                 case "local-port-in-use": return "Another copy of the game is running. Close it before joining your friend.";
-                case "room-full": return "This game already has two players. Ask your friend to create a new invitation when a place is available.";
+                case "room-full": return "This host is using an older two-player edition. Update both copies of the game.";
                 default: return "We couldn't connect to your friend. Check that their invitation is still open and that you are both connected to the Internet.";
             }
         }
@@ -256,6 +281,10 @@ namespace HordesOfAzeroth.Launcher
             if (m_disposed)
                 return;
             m_disposed = true;
+            string invitationFile = Path.Combine(m_folder.LauncherData, "coop-invitation.txt");
+            try { if (File.Exists(invitationFile)) File.Delete(invitationFile); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
             m_hosted.TrySetCanceled();
             m_ready.TrySetCanceled();
             if (m_process == null)

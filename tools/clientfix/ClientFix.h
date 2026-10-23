@@ -8,3 +8,5 @@ void PrepareBorderless();
 void StartBorderless(HWND window);
 void RegisterBorderlessFunctions();
 void RegisterInteractFunctions();
+void RegisterCoopFunctions();
+void TickLoginRecovery(void* L);

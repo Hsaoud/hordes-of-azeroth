@@ -929,6 +929,7 @@ namespace
         Lua::Register("HoAController_SetScrollMode", &Lua_SetScrollMode);
         RegisterInteractFunctions();
         RegisterBorderlessFunctions();
+        RegisterCoopFunctions();
         s_reportedKind = PadKind::None;
         s_capture = false;
         LeaveCursorMode();
@@ -1121,6 +1122,7 @@ namespace
         if (!L)
             return;
         RegisterLuaFunctions(L);
+        TickLoginRecovery(L);
 
         PadState pad = ReadPad();
         s_lastPad = pad;

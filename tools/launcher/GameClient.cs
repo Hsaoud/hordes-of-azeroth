@@ -27,11 +27,16 @@ namespace HordesOfAzeroth.Launcher
 
         public bool IsRunning => Process.GetProcessesByName(ProcessName).Length > 0;
 
-        public void Prepare(bool widescreen, string account = Account, string password = Password, bool coop = false, string heroProfile = null)
+        public void Prepare(bool widescreen, string account = Account, string password = Password, bool coop = false, string heroProfile = null, string invitation = null)
         {
-            if (!File.Exists(m_folder.GameExe))
-                throw new FileNotFoundException($"{m_folder.GameExeName} is missing. {LocalServer.RepairAdvice}");
+            LoginRepair.Apply(m_folder);
 
+            Directory.CreateDirectory(m_folder.LauncherData);
+            string invitationFile = Path.Combine(m_folder.LauncherData, "coop-invitation.txt");
+            if (coop && !string.IsNullOrEmpty(invitation))
+                File.WriteAllText(invitationFile, invitation, Encoding.ASCII);
+            else if (File.Exists(invitationFile))
+                File.Delete(invitationFile);
             Directory.CreateDirectory(m_folder.GlueXml);
             File.WriteAllLines(Path.Combine(m_folder.GlueXml, "BonkAccount.lua"), new[]
             {
@@ -60,7 +65,7 @@ namespace HordesOfAzeroth.Launcher
                 foreach (string cached in Directory.GetFiles(m_folder.Cache, "*.wdb"))
                     File.Delete(cached);
 
-            ForeignAddons.Disable(m_folder, Account);
+            ForeignAddons.Disable(m_folder, account);
             GameConfig.EnsureDefaults(m_folder, RealmName);
             GameConfig.SetLogin(m_folder, account, RealmName);
             ClientPatcher.SetFieldOfView(m_folder, widescreen);

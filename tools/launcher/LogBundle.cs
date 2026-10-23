@@ -11,7 +11,7 @@ namespace HordesOfAzeroth.Launcher
     {
         const long MaxBytesPerFile = 2 * 1024 * 1024;
         const int NewestCrashes = 3;
-        static readonly string[] SkippedLogs = { "Chat.log", "WoWChatLog.txt" };
+        static readonly string[] SkippedLogs = { "Chat.log", "WoWChatLog.txt", "coop-invitation.txt" };
 
         public static string Save(GameFolder folder)
         {
