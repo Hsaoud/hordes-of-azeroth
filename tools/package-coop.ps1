@@ -61,6 +61,7 @@ foreach ($name in 'BonkAccount.lua', 'BonkStats.lua') {
 Copy-Item -Path (Join-Path $projectRoot 'config\*.overrides.conf') -Destination (Join-Path $overlay 'config') -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'COOP.md') -Destination (Join-Path $overlay 'LIRE-MOI-COOP.md') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'coop\PLAY-TOGETHER.fr.txt') -Destination (Join-Path $overlay 'JOUER-ENSEMBLE.txt') -Force
+Copy-Item -LiteralPath (Join-Path $projectRoot 'VERSION') -Destination $overlay -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination $overlay -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'THIRD-PARTY-NOTICES.md') -Destination $overlay -Force
 Copy-Item -LiteralPath (Join-Path $outputRoot 'HordesOfAzeroth-Coop-Sources.zip') -Destination $overlay -Force
