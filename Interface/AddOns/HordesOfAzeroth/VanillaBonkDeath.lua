@@ -4,6 +4,7 @@ local watcher = CreateFrame("Frame")
 watcher:Hide()
 
 local function CanRelease()
+    if VanillaBonkUI and VanillaBonkUI.CooperativeDeath then return false end
     local remaining = GetReleaseTimeRemaining()
     return remaining > 0 or remaining == -1
 end

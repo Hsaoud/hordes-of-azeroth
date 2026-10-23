@@ -930,6 +930,7 @@ namespace
         RegisterInteractFunctions();
         RegisterBorderlessFunctions();
         RegisterCoopFunctions();
+        RegisterKeyboardFunctions();
         s_reportedKind = PadKind::None;
         s_capture = false;
         LeaveCursorMode();

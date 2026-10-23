@@ -10,3 +10,4 @@ void RegisterBorderlessFunctions();
 void RegisterInteractFunctions();
 void RegisterCoopFunctions();
 void TickLoginRecovery(void* L);
+void RegisterKeyboardFunctions();

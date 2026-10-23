@@ -34,7 +34,7 @@ with zipfile.ZipFile(package) as archive:
     ):
         if hashlib.sha256(archive.read(prefix + relative)).digest() != hashlib.sha256((root / compiled).read_bytes()).digest():
             raise ValueError("Outdated packaged file: " + relative)
-    for relative in ("VanillaBonkNavigation.lua", "VanillaBonkMenu.lua", "VanillaBonkTracker.lua"):
+    for relative in ("VanillaBonkNavigation.lua", "VanillaBonkMenu.lua", "VanillaBonkTracker.lua", "VanillaBonkKeyboard.lua", "VanillaBonkHeroBar.lua", "VanillaBonkDeath.lua", "VanillaBonkPlates.lua", "HordesOfAzeroth.toc"):
         local = root / "Interface" / "AddOns" / "HordesOfAzeroth" / relative
         if archive.read(prefix + "Interface/AddOns/HordesOfAzeroth/" + relative) != local.read_bytes():
             raise ValueError("Outdated interface: " + relative)

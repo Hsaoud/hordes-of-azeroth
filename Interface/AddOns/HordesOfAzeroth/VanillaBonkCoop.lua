@@ -257,3 +257,48 @@ UI.Listen({
         RefreshLobby()
     end,
 })
+
+local rescue = CreateFrame("Frame", "VanillaBonkRescue", UIParent)
+rescue:SetWidth(360)
+rescue:SetHeight(80)
+rescue:SetPoint("TOP", UIParent, "TOP", 0, -130)
+Surface(rescue)
+rescue:Hide()
+rescue.title = UI.Text(rescue, 14)
+rescue.title:SetPoint("TOP", rescue, "TOP", 0, -12)
+rescue.title:SetTextColor(1, 0.82, 0.4)
+rescue.help = UI.Text(rescue, 11)
+rescue.help:SetPoint("TOP", rescue.title, "BOTTOM", 0, -7)
+rescue.bar = CreateFrame("StatusBar", nil, rescue)
+rescue.bar:SetWidth(330)
+rescue.bar:SetHeight(12)
+rescue.bar:SetPoint("BOTTOM", rescue, "BOTTOM", 0, 12)
+rescue.bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+rescue.bar:SetStatusBarColor(0.35, 0.8, 0.55)
+rescue.bar:SetMinMaxValues(0, 1)
+local fallen = {}
+local function RefreshRescue()
+    local selected
+    for name, entry in pairs(fallen) do
+        if not selected or entry.self or (not selected.self and name < selected.name) then selected = entry end
+    end
+    if not selected then rescue:Hide() return end
+    rescue.title:SetText(selected.self and "Your allies can revive you" or ("Revive " .. selected.name))
+    rescue.help:SetText("Stay within the circle for 6 seconds")
+    rescue.bar:SetValue(min(1, selected.progress / selected.total))
+    rescue:Show()
+end
+UI.Listen({
+    rescue = function(f)
+        local name, total, own = f[2], tonumber(f[4]) or 0, f[5] == "1"
+        if total == 0 then fallen[name] = nil
+        else fallen[name] = { name = name, total = total, progress = tonumber(f[3]) or 0, self = own } end
+        if own then
+            UI.CooperativeDeath = total > 0
+            if UI.CooperativeDeath and StaticPopup_Hide then StaticPopup_Hide("DEATH") end
+        end
+        RefreshRescue()
+    end,
+    ["end"] = function() fallen = {} UI.CooperativeDeath = false rescue:Hide() end,
+    start = function() fallen = {} UI.CooperativeDeath = false rescue:Hide() end,
+})

@@ -158,6 +158,7 @@ menuCard.resume = Button("Resume", 28, function()
     Close()
 end)
 menuCard.endRun = Button("|cffff5a4aLeave Expedition|r", 24, function()
+    if UI.CooperativeDeath then return end
     PlaySound("igMainMenuOption")
     confirm:Show()
 end)
@@ -364,8 +365,9 @@ confirm.no:SetPoint("BOTTOMLEFT", confirm.box, "BOTTOM", 6, 18)
 
 local function Refresh()
     LayoutButtons()
+    if UI.CooperativeDeath then menuCard.endRun:Disable() else menuCard.endRun:Enable() end
     if run.inRun then
-        menu.title:SetText("Paused")
+        menu.title:SetText(UI.CooperativeDeath and "Waiting for rescue" or "Paused")
         local difficulty = run.difficulty ~= "" and ("  |cff9d9d9d·|r  |cff" .. (DIFFICULTY_COLORS[run.difficulty] or "ffffff") .. run.difficulty .. "|r") or ""
         menu.subtitle:SetText("|cffffd100Stage " .. run.stage .. "|r" .. difficulty .. "  |cff9d9d9d·|r  |cffffffff" .. UI.FormatTime(run.elapsed) .. "|r")
         levelRow.value:SetText(run.level or "-")

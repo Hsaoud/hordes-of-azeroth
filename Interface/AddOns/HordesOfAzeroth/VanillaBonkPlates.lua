@@ -65,6 +65,8 @@ local NO_ICONS = {}
 local allies = {}
 local allyCount = 0
 local allyPlatesForced = false
+local partyByGuid = {}
+local partyCount = 0
 
 local stackPlates = {}
 local stackSoon = false
@@ -91,6 +93,18 @@ end
 
 local function Recolor(plate)
     local health = plate.vbHealth
+    local member = plate.vbGuid and partyByGuid[plate.vbGuid]
+    if member then
+        plate.vbFriendly = true
+        local maximum = max(1, UnitHealthMax(member))
+        local value = UnitHealth(member)
+        health:SetMinMaxValues(0, maximum)
+        health:SetValue(value)
+        if UnitIsDeadOrGhost(member) then health:SetStatusBarColor(0.5, 0.5, 0.5)
+        elseif value / maximum < 0.3 then health:SetStatusBarColor(0.95, 0.25, 0.2)
+        else health:SetStatusBarColor(0.2, 0.8, 0.45) end
+        return
+    end
     local r, g, b = health:GetStatusBarColor()
     local color
     if r > 0.9 and g < 0.2 and b < 0.2 then
@@ -215,7 +229,7 @@ local function ApplyKind(plate)
             mob = mobs[plate.vbName:GetText() or ""]
         end
     end
-    local kind = mob and mob.kind or 0
+    local kind = plate.vbGuid and partyByGuid[plate.vbGuid] and ALLY_KIND or mob and mob.kind or 0
     local icons = mob and mob.icons or NO_ICONS
     if plate.vbKind == kind and plate.vbIcons == icons and not LayoutLost(plate) then
         return
@@ -308,7 +322,8 @@ local function Refresh(plate)
     UpdateMuted(plate)
     UpdateDebuffs(plate)
     if plate.vbTitle:IsShown() then
-        plate.vbTitle:SetText(plate.vbName:GetText())
+        local member = plate.vbGuid and partyByGuid[plate.vbGuid]
+        plate.vbTitle:SetText(member and ((UnitName(member) or "Ally") .. (UnitIsDeadOrGhost(member) and " - Down" or "")) or plate.vbName:GetText())
     end
 
     if plate.vbGlow and plate.vbGlow:IsShown() then
@@ -793,7 +808,7 @@ local function ShowAllyPlates()
 end
 
 local function ReleaseAllyPlates()
-    if not allyPlatesForced then
+    if not allyPlatesForced or partyCount > 0 then
         return
     end
     allyPlatesForced = false
@@ -805,6 +820,30 @@ local function ReleaseAllyPlates()
     end
     RefreshAllPlates()
 end
+
+local function RefreshPartyPlates()
+    partyByGuid = {}
+    partyCount = 0
+    if UnitGUID then
+        local raid = GetNumRaidMembers() > 0
+        local count = raid and GetNumRaidMembers() or GetNumPartyMembers()
+        for index = 1, count do
+            local unit = (raid and "raid" or "party") .. index
+            if not UnitIsUnit(unit, "player") then
+                local guid = UnitGUID(unit)
+                if guid then partyByGuid[guid] = unit partyCount = partyCount + 1 end
+            end
+        end
+    end
+    if partyCount > 0 or allyCount > 0 then ShowAllyPlates() else ReleaseAllyPlates() end
+    RefreshAllPlates()
+end
+
+local partyEvents = CreateFrame("Frame")
+partyEvents:RegisterEvent("PLAYER_ENTERING_WORLD")
+partyEvents:RegisterEvent("PARTY_MEMBERS_CHANGED")
+partyEvents:RegisterEvent("RAID_ROSTER_UPDATE")
+partyEvents:SetScript("OnEvent", RefreshPartyPlates)
 
 local function ForgetAlly(id)
     local guid = allies[id]

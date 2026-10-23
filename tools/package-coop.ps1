@@ -88,9 +88,16 @@ if ($GameFolder) {
     if ($destination.StartsWith($source + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Choose an installed game outside the build output.' }
     if (Test-Path -LiteralPath $destination) {
         if (-not $ReusePreparedGame -or -not (Test-Path -LiteralPath (Join-Path $destination 'HordesOfAzeroth\coop-build.txt'))) { throw 'The prepared game already exists. Choose another output folder before preparing a fresh copy.' }
-        if (Test-Path -LiteralPath (Join-Path $source 'server\mariadb-data')) {
-            & robocopy (Join-Path $source 'server\mariadb-data') (Join-Path $destination 'server\mariadb-data') /E /R:1 /W:1 /NFL /NDL /NJH /NJS
-            if ($LASTEXITCODE -ge 8) { throw 'The database did not synchronize.' }
+        $sourceData = Join-Path $source 'server\mariadb-data'
+        $targetData = Join-Path $destination 'server\mariadb-data'
+        $sourceFiles = @(Get-ChildItem -LiteralPath $sourceData -File -Recurse)
+        $targetFiles = @(Get-ChildItem -LiteralPath $targetData -File -Recurse)
+        if ($sourceFiles.Count -ne $targetFiles.Count) { throw 'The prepared database has changed. Choose a new output folder to preserve player saves.' }
+        foreach ($file in $sourceFiles) {
+            $targetFile = Join-Path $targetData $file.FullName.Substring($sourceData.Length + 1)
+            if (-not (Test-Path -LiteralPath $targetFile) -or (Get-FileHash -LiteralPath $file.FullName).Hash -ne (Get-FileHash -LiteralPath $targetFile).Hash) {
+                throw 'The prepared database has changed. Choose a new output folder to preserve player saves.'
+            }
         }
     } else {
         New-Item -ItemType Directory -Path $destination | Out-Null

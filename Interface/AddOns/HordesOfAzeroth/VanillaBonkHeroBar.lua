@@ -423,7 +423,7 @@ end
 
 local function RunHeld()
     local offer, vendor, gear = getglobal("VanillaBonkOffer"), getglobal("VanillaBonkVendor"), getglobal("VanillaBonkGear")
-    return (offer and offer.open) or (vendor and vendor.open) or (gear and gear.open) or (UI.MenuPaused and UI.MenuPaused())
+    return UI.ServerPaused or (offer and offer.open) or (vendor and vendor.open) or (gear and gear.open) or (UI.MenuPaused and UI.MenuPaused())
 end
 UI.RunHeld = RunHeld
 
@@ -708,14 +708,10 @@ local function RefreshDash()
 end
 
 dashRing:SetScript("OnUpdate", function()
-    if not dash.left or RunHeld() then
+    if not dash.left or dash.paused or RunHeld() then
         return
     end
-    dash.left = dash.left - arg1
-    if dash.left <= 0 then
-        dash.charges = min(dash.max, dash.charges + 1)
-        dash.left = dash.charges < dash.max and dash.cooldown / 1000 or nil
-    end
+    dash.left = max(0, dash.left - arg1)
     RefreshDash()
 end)
 
@@ -871,8 +867,14 @@ handlers["dash"] = function(f)
     local untilNext = tonumber(f[4] or "") or 0
     dash.cooldown = tonumber(f[5] or "") or 0
     dash.blink = f[6] == "1"
+    dash.paused = f[7] == "1"
+    UI.ServerPaused = dash.paused
     dash.left =(dash.charges < dash.max and untilNext > 0) and untilNext / 1000 or nil
     RefreshDash()
+end
+
+handlers["pause"] = function(f)
+    UI.ServerPaused = f[2] == "1"
 end
 
 handlers["loadout"] = function(f)

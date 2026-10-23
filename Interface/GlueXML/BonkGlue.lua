@@ -72,6 +72,8 @@ end
 
 local OriginalAccountLoginOnShow = AccountLogin_OnShow;
 function AccountLogin_OnShow()
+	Bonk.reachedServer = false;
+	Bonk.loginTried = false;
 	OriginalAccountLoginOnShow();
 	BonkHeroFrame:Hide();
 
@@ -83,8 +85,6 @@ function AccountLogin_OnShow()
 	Bonk.creating = nil;
 	Bonk.wiping = nil;
 	Bonk.heroes = {};
-	Bonk.reachedServer = false;
-	Bonk.loginTried = false;
 
 	if ( not BONK_ACCOUNT or not EULAAccepted() or not TOSAccepted() ) then
 		BonkLoginFrame:Hide();
