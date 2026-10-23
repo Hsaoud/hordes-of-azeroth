@@ -44,6 +44,7 @@ def run(fixtures):
         before_rewards = [len(p.messages) for p in players]
         host.chat_command(f'go xy {float(objective[4])+30} {objective[5]} {objective[6]}')
         guest.chat_command(f'go xy {objective[4]} {objective[5]} {objective[6]}')
+        guest.message('BONK~capture~Ley Line~', since=before_rewards[1], seconds=20)
         for index, player in enumerate(players):
             player.message('BONK~leyofferend', since=before_rewards[index], seconds=30)
         print('PASS a guest captures a Ley Line away from the host; both receive independent rewards', flush=True)
