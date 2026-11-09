@@ -1012,3 +1012,64 @@ events:SetScript("OnEvent", function()
 end)
 
 SetMode(false)
+
+do
+    local dock = CreateFrame("Frame", "VanillaBonkAuraDock", UIParent)
+    dock:SetWidth(400)
+    dock:SetHeight(1)
+    dock:SetPoint("BOTTOM", root, "BOTTOM", 0, 144)
+    dock:EnableMouse(false)
+    local buttons = {}
+    local elapsed = 0
+
+    local function LayoutAuras()
+        local count = 0
+        for index = 1, 2 do
+            local button = getglobal("TempEnchant" .. index)
+            if button and button:IsShown() then
+                count = count + 1
+                buttons[count] = button
+            end
+        end
+        for index = 0, 31 do
+            local button = getglobal("BuffButton" .. index)
+            if button and button:IsShown() then
+                count = count + 1
+                buttons[count] = button
+            end
+        end
+        local columns = max(4, min(10, floor((UIParent:GetWidth() - 48) / 36)))
+        for index = 1, count do
+            local button = buttons[index]
+            local row = floor((index - 1) / columns)
+            local column = mod(index - 1, columns)
+            local rowCount = min(columns, count - row * columns)
+            local x = (column - (rowCount - 1) / 2) * 36
+            local y = row * 46
+            local point, relative, relativePoint, oldX, oldY = button:GetPoint(1)
+            if point ~= "BOTTOM" or relative ~= dock or relativePoint ~= "BOTTOM" or oldX ~= x or oldY ~= y then
+                button:ClearAllPoints()
+                button:SetPoint("BOTTOM", dock, "BOTTOM", x, y)
+            end
+        end
+        for index = count + 1, getn(buttons) do buttons[index] = nil end
+    end
+
+    dock:RegisterEvent("PLAYER_ENTERING_WORLD")
+    dock:RegisterEvent("PLAYER_AURAS_CHANGED")
+    dock:RegisterEvent("DISPLAY_SIZE_CHANGED")
+    dock:SetScript("OnEvent", function() elapsed = 1 end)
+    dock:SetScript("OnUpdate", function()
+        elapsed = elapsed + arg1
+        if elapsed < 0.1 then return end
+        elapsed = 0
+        LayoutAuras()
+    end)
+
+    local previous = BuffButtons_UpdatePositions
+    BuffButtons_UpdatePositions = function()
+        if previous then previous() end
+        LayoutAuras()
+    end
+    LayoutAuras()
+end

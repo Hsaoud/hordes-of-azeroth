@@ -1,6 +1,14 @@
 VanillaBonkUI = {}
 local UI = VanillaBonkUI
 
+function UI.Command(text)
+    if UnitIsDeadOrGhost("player") then
+        SendChatMessage(".bonk " .. text, "WHISPER", nil, UnitName("player"))
+    else
+        SendChatMessage(".bonk " .. text, "SAY")
+    end
+end
+
 UI.FONT = "Fonts\\FRIZQT__.TTF"
 UI.NUMBER_FONT = "Fonts\\ARIALN.TTF"
 UI.TITLE_FONT = "Fonts\\MORPHEUS.TTF"

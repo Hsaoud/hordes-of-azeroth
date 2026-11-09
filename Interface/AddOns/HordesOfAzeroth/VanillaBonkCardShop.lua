@@ -70,7 +70,7 @@ local function Unlock(card)
     end
     busySince = GetTime()
     PlaySound("LOOTWINDOWCOINSOUND")
-    SendChatMessage(".bonk unlock " .. card.kind .. " " .. card.id, "SAY")
+    VanillaBonkUI.Command("unlock " .. card.kind .. " " .. card.id)
     CardShop.Refresh()
 end
 

@@ -115,7 +115,7 @@ local function Pick(index)
     end
     frame.picking = true
     PlaySound("igMainMenuOptionCheckBoxOn")
-    SendChatMessage(".bonk glyph " .. index, "SAY")
+    VanillaBonkUI.Command("glyph " .. index)
 end
 
 local function Divider(card, r, g, b)

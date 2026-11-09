@@ -66,6 +66,7 @@ function GetNumPartyMembers() return partyCount end
 function UnitHealth() return 75 end
 function UnitHealthMax() return 100 end
 function UnitIsConnected() return true end
+function UnitIsDeadOrGhost() return false end
 function UnitName(unit) return unit end
 function GetTime() return 1 end
 function PlaySound() end

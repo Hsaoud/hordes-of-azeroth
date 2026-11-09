@@ -18,7 +18,11 @@ Les orbes d'expérience sont communs : un ramassage donne exactement la même qu
 
 La disposition AZERTY ou QWERTY est détectée au démarrage du personnage. Les touches de déplacement par défaut sont adaptées sans écraser les raccourcis personnalisés. Le dash suit les pauses transmises par le serveur et attend sa confirmation avant d'annoncer une charge disponible. Les plaques de nom des membres du groupe affichent leur vie réelle, avec une couleur d'alerte à faible vie et un état grisé lorsqu'ils sont à terre.
 
+Un héros mort peut choisir ses améliorations et ses récompenses. La pause collective reste active jusqu'au dernier choix, y compris celui d'un héros à terre ; le sauvetage reprend ensuite. Les commandes d'interface utilisent un message privé adressé au personnage pendant la mort, car le client bloque le canal Dire dans cet état. Les validations de mini-événements et leur Valor sont créditées à chaque participant. Les kobolds rendent leur XP sous forme d'orbes communs ; ils ne produisent plus de butin d'élite supplémentaire réservé aux invités.
+
 Le HUD propose des icônes de monnaie avec infobulles, une barre de progression vers le prochain coffre, une chronologie de mission, une minimap carrée plus grande avec zoom et carte, ainsi qu'un panneau de groupe avec barres de vie. La liste des joueurs comporte des pages et le panneau de raid se parcourt à la molette.
+
+Les effets actifs et enchantements d'arme sont regroupés au-dessus des barres de sorts. Les rangées supplémentaires se développent vers le haut et conservent les durées, infobulles et interactions natives. Les barres de vie alliées ignorent les notifications provoquées par leur propre synchronisation, ce qui évite la récursion « C stack overflow ».
 
 Les personnages des invités sont enregistrés **sur le PC de l'hôte**. Revenez avec le même compte Windows chez le même hôte pour les retrouver. L'identité locale de l'invité est conservée dans `%LOCALAPPDATA%\HordesOfAzeroth\coop-identity.dat`, protégée par Windows ; elle ne doit pas être distribuée. L'hôte doit garder son jeu et son lanceur ouverts : leur fermeture arrête le monde. Une nouvelle session reprend les personnages à l'auberge, pas la mission interrompue.
 

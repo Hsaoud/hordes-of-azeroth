@@ -15,7 +15,7 @@ local WAIT = 1.5
 local shop = { slots = {}, valor = 0, rerollCost = 0, restocks = 0, seconds = 0, name = "Zixil", waitUntil = 0 }
 
 local function Command(text)
-    SendChatMessage(".bonk vendor " .. text, "SAY")
+    VanillaBonkUI.Command("vendor " .. text)
 end
 
 local function Busy()

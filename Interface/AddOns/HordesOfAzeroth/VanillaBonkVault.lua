@@ -16,7 +16,7 @@ local vault = { slots = 1, chosen = {}, order = {}, finds = {} }
 local incoming
 
 local function Command(text)
-    SendChatMessage(".bonk vault " .. text, "SAY")
+    VanillaBonkUI.Command("vault " .. text)
 end
 
 local function QualityColor(quality)

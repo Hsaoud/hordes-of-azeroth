@@ -98,8 +98,10 @@ local function Recolor(plate)
         plate.vbFriendly = true
         local maximum = max(1, UnitHealthMax(member))
         local value = UnitHealth(member)
+        plate.vbUpdatingHealth = true
         health:SetMinMaxValues(0, maximum)
         health:SetValue(value)
+        plate.vbUpdatingHealth = nil
         if UnitIsDeadOrGhost(member) then health:SetStatusBarColor(0.5, 0.5, 0.5)
         elseif value / maximum < 0.3 then health:SetStatusBarColor(0.95, 0.25, 0.2)
         else health:SetStatusBarColor(0.2, 0.8, 0.45) end
@@ -461,6 +463,9 @@ local function Style(plate)
     end)
     health:SetScript("OnValueChanged", function()
         local owner = this:GetParent()
+        if owner.vbUpdatingHealth then
+            return
+        end
         Recolor(owner)
         TintKind(owner)
         UpdateText(owner)

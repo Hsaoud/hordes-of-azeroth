@@ -100,7 +100,7 @@ local function Sample()
         Trim(VanillaBonkPerfLog.slow, KEEP_SLOW)
         if GetTime() - lastDipReport >= DIP_REPORT_GAP then
             lastDipReport = GetTime()
-            SendChatMessage(".bonk perfdip", "SAY")
+            VanillaBonkUI.Command("perfdip")
         end
     end
     if minute.seconds >= MINUTE_SECONDS then

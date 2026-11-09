@@ -24,7 +24,7 @@ local function Split(text, separator)
 end
 
 local function Command(text)
-    SendChatMessage(".bonk " .. text, "SAY")
+    VanillaBonkUI.Command(text)
 end
 
 local function FormatTime(seconds)

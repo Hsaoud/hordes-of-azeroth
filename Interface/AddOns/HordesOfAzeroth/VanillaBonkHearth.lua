@@ -119,12 +119,12 @@ tip:SetScript("OnShow", function()
         "Put your best find in the vault, then stand in the ring for a few seconds to escape to the Inn.")
     this.key:SetText(KeyLine())
     this:SetHeight(22 + this.title:GetHeight() + 10 + this.body:GetHeight() + 10 + this.key:GetHeight() + 22 + 30)
-    SendChatMessage(".bonk menu 1", "SAY")
+    VanillaBonkUI.Command("menu 1")
 end)
 tip:SetScript("OnHide", function()
     VanillaBonkHearthTipDone = true
     if not (VanillaBonkMenu and VanillaBonkMenu:IsShown()) then
-        SendChatMessage(".bonk menu 0", "SAY")
+        VanillaBonkUI.Command("menu 0")
     end
 end)
 tip:SetScript("OnUpdate", function()

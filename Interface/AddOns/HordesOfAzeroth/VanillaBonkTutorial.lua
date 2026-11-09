@@ -911,7 +911,7 @@ function plateGuide.Close()
     end
     plateGuide.box:Hide()
     if not (VanillaBonkMenu and VanillaBonkMenu:IsShown()) then
-        SendChatMessage(".bonk menu 0", "SAY")
+        VanillaBonkUI.Command("menu 0")
     end
 end
 
@@ -929,7 +929,7 @@ function plateGuide.Show()
     height = height + 6 + box.selfBar:GetHeight() + GUIDE_ROW_GAP
     box:SetHeight(height + 22 + 18)
     box:Show()
-    SendChatMessage(".bonk menu 1", "SAY")
+    VanillaBonkUI.Command("menu 1")
 end
 
 function UI.ResetTutorial()

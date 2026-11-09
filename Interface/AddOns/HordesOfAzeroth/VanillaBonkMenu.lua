@@ -14,7 +14,7 @@ local DIFFICULTY_COLORS = { Normal = "40ff40", Heroic = "ffd100", Mythic = "ff4d
 local run = { inRun = false, stage = 1, difficulty = "", elapsed = 0, spells = {}, passives = {} }
 
 local function Command(text)
-    SendChatMessage(".bonk " .. text, "SAY")
+    VanillaBonkUI.Command(text)
 end
 
 local menu = CreateFrame("Frame", "VanillaBonkMenu", UIParent)

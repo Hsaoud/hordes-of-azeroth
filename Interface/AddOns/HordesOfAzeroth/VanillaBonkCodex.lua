@@ -1020,7 +1020,7 @@ TogglePool = function(entry)
     end
     window.buying = GetTime()
     PlaySound(entry.off and "igMainMenuOptionCheckBoxOn" or "igMainMenuOptionCheckBoxOff")
-    SendChatMessage(".bonk pool " .. entry.kind .. " " .. entry.id .. (entry.off and " on" or " off"), "SAY")
+    VanillaBonkUI.Command("pool " .. entry.kind .. " " .. entry.id .. (entry.off and " on" or " off"))
 end
 
 function Buy(entry)
@@ -1029,7 +1029,7 @@ function Buy(entry)
     end
     window.buying = GetTime()
     PlaySound("igMainMenuOptionCheckBoxOn")
-    SendChatMessage(".bonk unlock " .. entry.kind .. " " .. entry.id, "SAY")
+    VanillaBonkUI.Command("unlock " .. entry.kind .. " " .. entry.id)
     Refresh(true)
 end
 
@@ -1084,7 +1084,7 @@ SlashCmdList["VANILLABONKSPELLBOOK"] = function()
         return
     end
     openRequested = true
-    SendChatMessage(".bonk codex", "SAY")
+    VanillaBonkUI.Command("codex")
 end
 
 local handlers = {}

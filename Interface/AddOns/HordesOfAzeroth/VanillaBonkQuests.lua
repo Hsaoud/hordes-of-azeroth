@@ -300,7 +300,7 @@ SlashCmdList["VANILLABONKQUESTS"] = function()
     else
         openRequested = true
     end
-    SendChatMessage(".bonk quests", "SAY")
+    VanillaBonkUI.Command("quests")
 end
 
 local TOAST_WIDTH = 340

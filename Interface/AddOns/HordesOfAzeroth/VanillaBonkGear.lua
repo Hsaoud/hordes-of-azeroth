@@ -104,7 +104,7 @@ local function Send(text)
         return
     end
     frame.waitUntil = GetTime() + WAIT
-    SendChatMessage(".bonk gear " .. text, "SAY")
+    VanillaBonkUI.Command("gear " .. text)
 end
 
 local function EquipIn(slot)

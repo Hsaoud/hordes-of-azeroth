@@ -7,7 +7,7 @@ local buttons = {}
 local RefreshTabs
 
 local function Command(text)
-    SendChatMessage(".bonk gear " .. text, "SAY")
+    VanillaBonkUI.Command("gear " .. text)
 end
 
 local function TabButton(index)

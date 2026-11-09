@@ -226,7 +226,7 @@ function VanillaBonk_Dash()
         return
     end
     lastSent = now
-    SendChatMessage(".bonk dash", "SAY")
+    VanillaBonkUI.Command("dash")
 end
 
 local shiftAlone = false

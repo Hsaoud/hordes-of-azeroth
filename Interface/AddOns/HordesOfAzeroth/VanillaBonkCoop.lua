@@ -91,7 +91,7 @@ panel:SetScript("OnEnter", function()
     GameTooltip:Show()
 end)
 panel:SetScript("OnLeave", function() GameTooltip:Hide() end)
-panel.cancel = UI.Button(panel, 70, "Cancel", function() SendChatMessage(".bonk coop cancel", "SAY") end)
+panel.cancel = UI.Button(panel, 70, "Cancel", function() VanillaBonkUI.Command("coop cancel") end)
 panel.cancel:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -8, -6)
 panel.cancel:Hide()
 
@@ -118,14 +118,14 @@ prompt.note:SetText("Accept to travel together. No need to visit the Run Master.
 local function Answer(accept)
     if coop.token then
         coop.answeredToken = coop.token
-        SendChatMessage(".bonk coop " .. (accept and "accept " or "decline ") .. coop.token, "SAY")
+        VanillaBonkUI.Command("coop " .. (accept and "accept " or "decline ") .. coop.token)
     end
     prompt:Hide()
 end
 prompt:SetScript("OnHide", function()
     if coop.token and coop.answeredToken ~= coop.token then
         coop.answeredToken = coop.token
-        SendChatMessage(".bonk coop decline " .. coop.token, "SAY")
+        VanillaBonkUI.Command("coop decline " .. coop.token)
     end
 end)
 prompt.accept = UI.Button(prompt, 170, "Join expedition", function() Answer(true) end)
@@ -215,13 +215,13 @@ party.previous = UI.Button(party, 70, "Previous", function() lobbyPage = max(0, 
 party.previous:SetPoint("BOTTOMLEFT", party, "BOTTOMLEFT", 30, 64)
 party.next = UI.Button(party, 70, "Next", function() lobbyPage = lobbyPage + 1 RefreshLobby() end)
 party.next:SetPoint("BOTTOMRIGHT", party, "BOTTOMRIGHT", -30, 64)
-party.join = UI.Button(party, 174, "Join party expedition", function() party:Hide() coop.token = nil SendChatMessage(".bonk coop join", "SAY") end)
+party.join = UI.Button(party, 174, "Join party expedition", function() party:Hide() coop.token = nil VanillaBonkUI.Command("coop join") end)
 party.join:SetPoint("BOTTOM", party, "BOTTOM", 0, 64)
-party.refresh = UI.Button(party, 160, "Refresh players", function() SendChatMessage(".bonk coop lobby", "SAY") end)
+party.refresh = UI.Button(party, 160, "Refresh players", function() VanillaBonkUI.Command("coop lobby") end)
 party.refresh:SetPoint("BOTTOM", party, "BOTTOM", 0, 24)
 function UI.OpenCoopParty()
     party:Show()
-    SendChatMessage(".bonk coop lobby", "SAY")
+    VanillaBonkUI.Command("coop lobby")
 end
 
 local timer = 0
